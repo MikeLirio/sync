@@ -28,4 +28,13 @@ program
     console.log(result);
   });
 
+program
+  .command('register <name> <password>')
+  .alias('r')
+  .description('Create a new user in the system.')
+  .action(function(name, password) {
+    debug(`Creating the user ${user}...`);
+    console.log(`${name} - ${password}`);
+  });
+
 program.parse(process.argv);
