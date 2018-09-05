@@ -4,7 +4,7 @@
   "description": "PoC about synchronization between a local database and a Server.",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "d:register": "random pass"
   },
   "repository": {
     "type": "git",
@@ -23,6 +23,7 @@
   "dependencies": {
     "commander": "^2.17.1",
     "debug": "^3.1.0",
+    "sqlite3": "^4.0.2",
     "uuid": "^3.3.2",
     "yarn": "^1.9.4"
   }
