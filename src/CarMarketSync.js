@@ -1,7 +1,7 @@
 'use strict';
 
-const debug = require('debug')('CarMarketSync');
-const db    = require('./database');
+const debug     = require('debug')('CarMarketSync');
+const Database  = require('./database');
 
 const defaultConfiguration = require('../conf/default.json');
 
@@ -17,12 +17,19 @@ class CarMarketSync {
   }
   
   load(configuration) {
-    this.configuration = configuration;
-    this.database = db.getDataBaseInstance(configuration.database);
+    this.conf = configuration;
+    this.database = new Database(this.conf.database);
   }
 
   register(name, password) {
-    console.log(`${name} - ${password}`);
+    const isAvaliable = this.database.isUsernameAvaliable();
+    console.log(isAvaliable);
+    if (isAvaliable) {
+      this.database.register(name, password);
+      console.log(`User ${name} has been registered.`);
+    } else {
+      console.log('The user already exists.');
+    }
   }
 }
 

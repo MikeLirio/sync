@@ -5,60 +5,72 @@ const fileSystem  = require('fs');
 const sqlite3     = require('sqlite3').verbose();
 const schema      = require('./database.schema');
 
-function existsDB(database) {
-  return fileSystem.existsSync(database);
-}
+class Database {
 
-function createTables(database) {
-  database.serialize(function () {
-    createTable(database, 'SyncProperties', schema.SyncProperties.sql);
-    schema.tables.forEach(table => {
-        createTable(database, `Local${table.name}`, table.local);
-        createTable(database, `Conflict${table.name}`, table.conflict);
-    })
-  });
-}
-
-function createTable(database, tableName, sql) {
-  debug(`Creating ${tableName} table...`);
-  database.run(sql, function(error) {
-    if (error) {
-      database.close();
-      throw new Error('An error appear: ' + error);
-    }
-  });
-}
-
-function getDataBaseInstance(configuration) {
-  const database = configuration.path + configuration.name;
-  if (!existsDB(database)) {
-    return initialize(database);
-  } else {
-    return new sqlite3.Database(database, sqlite3.OPEN_READWRITE);
+  constructor(configuration) {
+    this.config = configuration;
   }
-}
 
-function initialize(database) {
-  let db;
-  try {
-    db = new sqlite3.Database(database);
-    createTables(db);
+  getDataBasePath() {
+    return this.config.path + this.config.name;
+  }
+
+  existsDB(database) {
+    return fileSystem.existsSync(database);
+  }
+  
+  createTables(database) {
+    database.serialize(function () {
+      this.createTable(database, 'SyncProperties', schema.SyncProperties.sql);
+      schema.tables.forEach(table => {
+          this.createTable(database, `Local${table.name}`, table.local);
+          this.createTable(database, `Conflict${table.name}`, table.conflict);
+      })
+    });
+  }
+  
+  createTable(database, tableName, sql) {
+    debug(`Creating ${tableName} table...`);
+    database.run(sql, function(error) {
+      if (error) {
+        database.close();
+        throw new Error('An error appear: ' + error);
+      }
+    });
+  }
+  
+  getDataBaseInstance() {
+    const database = this.getDataBasePath();
+    if (!this.existsDB(database)) {
+      debug('The database does not exist. Creating it.');
+      return initialize(database);
+    } else {
+      return new sqlite3.Database(database, sqlite3.OPEN_READWRITE);
+    }
+  }
+  
+  initialize(database) {
+    const db = new sqlite3.Database(database);
+    this.createTables(db);
     db.close();
-  } catch(error) {
-    console.error('Something happens meanwhile the database was created.' + error);
-    if (fileSystem.existsSync(database)) {
-      fileSystem.unlinkSync(database, err => {
-        if (err) {
-          throw err;
-        }
-        console.error('The database was successfully deleted.');
-      });
-    }
+  }
+  
+  isUsernameAvaliable(username) {
+    const db = this.getDataBaseInstance();
+    db.get('SELECT username FROM LocalUsers WHERE username = ?',
+    username,
+    function(error, rows) {
+      if (error) {
+        return console.error(error.message);
+      }
+      return rows && rows.length === 0;
+    });
+  }
+  
+  storeUser(db, username, password) {
+  
   }
 }
 
-module.exports = {
-  existsDB,
-  initialize,
-  getDataBaseInstance
-}
+
+module.exports = Database;
