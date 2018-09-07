@@ -62,39 +62,31 @@ class Database {
   }
 
   async getUser(username) {
-    try{
-      const db = await this.getDataBaseInstance();
-      debug(`Getting the user ${username}...`);
-      
-      let user;
-      await Promise.all([
-        user = db.get('SELECT * FROM LocalUsers WHERE username = ?', username),
-      ])
-      .catch(error => console.error(error))
-      .finally(() =>  db.close())
-      .then(() => debug('Database closed.'));
-      return user;
-    } catch(error) {
-      console.error(error)
-      throw new Error(error)
-    } 
+    const db = await this.getDataBaseInstance();
+    debug(`Getting the user ${username}...`);
+    
+    let user;
+    await Promise.all([
+      user = db.get('SELECT * FROM LocalUsers WHERE username = ?', username),
+    ])
+    .catch(error => console.error(error))
+    .finally(() =>  db.close())
+    .then(() => debug('Database closed.'))
+    .catch(errorToClose => console.error(errorToClose));
+    return user;
   }
   
   async register(username, password) {
-    try {
-      const sql = `INSERT INTO LocalUsers VALUES (?, ?, 0, 1, 1)`;
-      const db = await this.getDataBaseInstance();
-      debug(`Creating the user ${username}...`);
-      await Promise.all([
-        db.run(sql, [username, password]),
-      ])
-      .catch(error => console.error(error))
-      .finally(() =>  db.close())
-      .then(() => debug('Database closed.'));
-    } catch(error) {
-      console.error(error)
-      throw new Error(error)
-    } 
+    const sql = `INSERT INTO LocalUsers VALUES (?, ?, 0, 1, 1)`;
+    const db = await this.getDataBaseInstance();
+    debug(`Creating the user ${username}...`);
+    await Promise.all([
+      db.run(sql, [username, password]),
+    ])
+    .catch(error => console.error(error))
+    .finally(() =>  db.close())
+    .then(() => debug('Database closed.'))
+    .catch(errorToClose => console.error(errorToClose));
   }
 }
 
