@@ -27,6 +27,8 @@ const cars = {
             + 'isActive INT) WITHOUT ROWID',
   local: 'CREATE TABLE if not exists LocalCars '
           + '(uuid TEXT PRIMARY KEY,'
+          + 'model TEXT,'
+          + 'value TEXT,'
           + 'isOnServer INT,'
           + 'isModified INT,'
           + 'isActive INT) WITHOUT ROWID',

@@ -48,10 +48,23 @@ program
   });
 
 program
-  .command('test')
-  .alias('t')
-  .action(function() {
-    app.sqlTest();
+  .command('addCar <usr> <carModel> <value>') // TODO add password
+  .alias('ac')
+  .description('Add a Car to an User')
+  .action(function(usr, carModel, value) {
+    const credentials = {
+      username: usr,
+      password: '',
+    };
+
+    const car = {
+      model: carModel,
+      value,
+    };
+    
+    debug(`Adding to user ${usr} the car ${car.model}:${car.value}`);
+    const app = new CarMarketSync();
+    app.addCar(credentials, car);
   });
 
 program.parse(process.argv);

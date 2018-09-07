@@ -21,18 +21,35 @@ class CarMarketSync {
     this.database = new Database(this.conf.database);
   }
 
-  async isUsernameAvaliable(username) {
+  async userRegistered(username) {
     const user = await this.database.getUser(username);
     debug('Users founded:', user);
     return !user || user.length === 0;
   }
 
+  async logUser(username, password) {
+    // TODO check password, in a future
+    return await this.userRegistered(username);
+  }
+
   async register(name, password) {
-    const isUserAvaliable = await this.isUsernameAvaliable(name); 
+    const isUserAvaliable = await this.userRegistered(name); 
     if (isUserAvaliable) {
-      await this.database.register(name, password);
+      await this.database.addUser(name, password);
+      console.log(`The user ${name} has been registered.`);
     } else {
       console.log(`The user ${name} already exists.`);
+    }
+  }
+
+  async addCar(credentials, car) {
+    // TODO check password. 
+    const isLogged = await this.database.getUser(credentials.username);
+    if (isLogged) {
+      await this.database.addCar(credentials.username, car);
+      console.log(`Car added.`);
+    } else {
+      console.log(`The user ${credentials.username} is not regstered.`);
     }
   }
 }
