@@ -97,10 +97,29 @@ class Database {
     return result;
   }
   
-  async getCars(user) {
+  async getCarsFromUser(user) {
     const db = await this.getDataBaseInstance();
     const sql = 'SELECT LocalCars.* FROM LocalCars, LocaluserOwnCar WHERE LocaluserOwnCar.user = ? AND LocalUserOwnCar.carId = LocalCars.uuid';
     return await this.getAsyncSQL(db, db.all(sql, user), `Getting cars of ${user}`);
+  }
+
+  async getCar(uuid) {
+    const db = await this.getDataBaseInstance();
+    const sql = 'SELECT * FROM LocalCars WHERE uuid = ?';
+    return await this.getAsyncSQL(db, db.all(sql, uuid), `Getting car ${uuid}`);
+  }
+  
+  async updateCar(newDetails) {
+    const db = await this.getDataBaseInstance();
+    debug(`Updating the car ${newDetails.uuid}`);
+    const update = 'UPDATE LocalCars SET model = ?, value = ?, isOnServer = 0, isModified = 1, isActive = 1 WHERE uuid = ?';
+    return await Promise.all([
+      db.run(update, [newDetails.model, newDetails.value, newDetails.uuid]),
+    ])
+    .catch(error => console.error(error))
+    .finally(() => db.close())
+    .then(() => debug('Database closed.'))
+    .catch(errorToClose => console.error(errorToClose));
   }
 
   async insertAsyncSQL(database, promises, debugMessage) {

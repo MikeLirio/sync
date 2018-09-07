@@ -76,4 +76,17 @@ program
     new CarMarketSync().getCars(usr);
   });
 
+program
+  .command('updateCar <model> <value> <uuid>')
+  .alias('uc')
+  .description('Modify details of a car')
+  .action(function(model, value, uuid) {
+    const newDetails = {
+      uuid,
+      model,
+      value
+    };
+    new CarMarketSync().editCar(newDetails);
+  });
+
 program.parse(process.argv);

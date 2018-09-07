@@ -54,12 +54,22 @@ class CarMarketSync {
   }
 
   async getCars(user) {
-    const cars = await this.database.getCars(user); 
+    const cars = await this.database.getCarsFromUser(user); 
     if (cars && cars.length > 0) {
       console.log('Cars founded:\n', cars);
     } else {
       console.log('No cars founded.');
     }
+  }
+
+  async editCar(newDetails) {
+    const car = await this.database.getCar(newDetails.uuid);
+    await this.database.updateCar(newDetails);
+    const updatedCar = await this.database.getCar(newDetails.uuid);
+    console.log('Old car details');
+    console.log(car);
+    console.log('New details');
+    console.log(updatedCar);
   }
 }
 
