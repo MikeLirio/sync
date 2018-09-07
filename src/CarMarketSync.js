@@ -52,6 +52,15 @@ class CarMarketSync {
       console.log(`The user ${credentials.username} is not regstered.`);
     }
   }
+
+  async getCars(user) {
+    const cars = await this.database.getCars(user); 
+    if (cars && cars.length > 0) {
+      console.log('Cars founded:\n', cars);
+    } else {
+      console.log('No cars founded.');
+    }
+  }
 }
 
 module.exports = CarMarketSync;

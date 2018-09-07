@@ -67,4 +67,13 @@ program
     app.addCar(credentials, car);
   });
 
+program
+  .command('getCars <usr>')
+  .alias('gc')
+  .description('Get the cars of an user.')
+  .action(function(usr) {
+    debug(`Obtaining the cars of ${usr}`);
+    new CarMarketSync().getCars(usr);
+  });
+
 program.parse(process.argv);

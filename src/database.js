@@ -67,7 +67,7 @@ class Database {
     const db = await this.getDataBaseInstance();
     let user;
     await Promise.all([
-      user = db.get('SELECT * FROM LocalUsers WHERE username = ?', username)
+      user = db.get('SELECT * FROM LocalUsers WHERE username = ?', username),
     ])
     .catch(error => console.error(error))
     .finally(() =>  db.close())
@@ -88,22 +88,41 @@ class Database {
   async addCar(user, car) {
     const db = await this.getDataBaseInstance();
     car.uuid = uuidGenerator();
-
+    
     const promises = [
       db.run('INSERT INTO LocalCars VALUES (?, ?, ?, 0, 1, 1)', [car.uuid, car.model, car.value]),
       db.run('INSERT INTO LocalUserOwnCar VALUES (?, ?, 0, 1, 1)', [user, car.uuid]),
     ];
-
-    return await this.executeAsyncSQL(db, promises, `Adding the car ${car.model}:${car.value} to ${user}`);
+    const result = await this.insertAsyncSQL(db, promises, `Adding the car ${car.model}:${car.value} to ${user}`);
+    return result;
+  }
+  
+  async getCars(user) {
+    const db = await this.getDataBaseInstance();
+    const sql = 'SELECT LocalCars.* FROM LocalCars, LocaluserOwnCar WHERE LocaluserOwnCar.user = ? AND LocalUserOwnCar.carId = LocalCars.uuid';
+    return await this.getAsyncSQL(db, db.all(sql, user), `Getting cars of ${user}`);
   }
 
-  async executeAsyncSQL(database, promises, debugMessage) {
+  async insertAsyncSQL(database, promises, debugMessage) {
     debug(debugMessage);
     return await Promise.all(promises)
     .catch(error => console.error(error))
     .finally(() =>  database.close())
     .then(() => debug('Database closed.'))
     .catch(errorToClose => console.error(errorToClose));
+  }
+
+  async getAsyncSQL(database, promise, debugMessage) {
+    let result = [];
+    debug(debugMessage);
+    await Promise.all([
+      result = promise,
+    ])
+    .catch(error => console.error(error))
+    .finally(() =>  database.close())
+    .then(() => debug('Database closed.'))
+    .catch(errorToClose => console.error(errorToClose));
+    return result;
   }
 }
 
