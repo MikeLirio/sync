@@ -2,7 +2,8 @@
 
 const debug       = require('debug')('database');
 const fileSystem  = require('fs');
-const sqlite3     = require('sqlite3').verbose();
+const sqlite      = require('sqlite');
+const Promise     = require('bluebird');
 const schema      = require('./database.schema');
 
 class Database {
@@ -18,59 +19,83 @@ class Database {
   existsDB(database) {
     return fileSystem.existsSync(database);
   }
-  
-  createTables(database) {
-    database.serialize(function () {
-      this.createTable(database, 'SyncProperties', schema.SyncProperties.sql);
+
+  async createTables(database) {
+    try {
+      await Promise.all([
+        this.createTable(database, 'SyncProperties', schema.SyncProperties.sql)
+      ]);
+      let tablePromises = [];
       schema.tables.forEach(table => {
-          this.createTable(database, `Local${table.name}`, table.local);
-          this.createTable(database, `Conflict${table.name}`, table.conflict);
-      })
-    });
+        tablePromises.push(this.createTable(database, `Local${table.name}`, table.local));
+        tablePromises.push(this.createTable(database, `Conflict${table.name}`, table.conflict));
+      });
+      await Promise.all(tablePromises);
+    } catch(error) {
+      console.error(error)
+      throw new Error(error)
+    }
   }
   
   createTable(database, tableName, sql) {
     debug(`Creating ${tableName} table...`);
-    database.run(sql, function(error) {
-      if (error) {
-        database.close();
-        throw new Error('An error appear: ' + error);
-      }
-    });
+    return database.run(sql)
   }
-  
-  getDataBaseInstance() {
-    const database = this.getDataBasePath();
-    if (!this.existsDB(database)) {
+
+  async initialize(database) {
+    const db = await sqlite.open(database);
+    await this.createTables(db);
+    return db;
+  }
+
+  async getDataBaseInstance() {
+    const databasePath = this.getDataBasePath();
+    let db;
+    if (!this.existsDB(databasePath)) {
       debug('The database does not exist. Creating it.');
-      return initialize(database);
+      db = await this.initialize(databasePath);
     } else {
-      return new sqlite3.Database(database, sqlite3.OPEN_READWRITE);
+      debug('getting db instance');
+      db = await sqlite.open(databasePath);
     }
+    return db;
+  }
+
+  async getUser(username) {
+    try{
+      const db = await this.getDataBaseInstance();
+      debug(`Getting the user ${username}...`);
+      
+      let user;
+      await Promise.all([
+        user = db.get('SELECT * FROM LocalUsers WHERE username = ?', username),
+      ])
+      .catch(error => console.error(error))
+      .finally(() =>  db.close())
+      .then(() => debug('Database closed.'));
+      return user;
+    } catch(error) {
+      console.error(error)
+      throw new Error(error)
+    } 
   }
   
-  initialize(database) {
-    const db = new sqlite3.Database(database);
-    this.createTables(db);
-    db.close();
-  }
-  
-  isUsernameAvaliable(username) {
-    const db = this.getDataBaseInstance();
-    db.get('SELECT username FROM LocalUsers WHERE username = ?',
-    username,
-    function(error, rows) {
-      if (error) {
-        return console.error(error.message);
-      }
-      return rows && rows.length === 0;
-    });
-  }
-  
-  storeUser(db, username, password) {
-  
+  async register(username, password) {
+    try {
+      const sql = `INSERT INTO LocalUsers VALUES (?, ?, 0, 1, 1)`;
+      const db = await this.getDataBaseInstance();
+      debug(`Creating the user ${username}...`);
+      await Promise.all([
+        db.run(sql, [username, password]),
+      ])
+      .catch(error => console.error(error))
+      .finally(() =>  db.close())
+      .then(() => debug('Database closed.'));
+    } catch(error) {
+      console.error(error)
+      throw new Error(error)
+    } 
   }
 }
-
 
 module.exports = Database;
