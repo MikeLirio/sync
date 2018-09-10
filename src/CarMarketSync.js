@@ -71,6 +71,26 @@ class CarMarketSync {
     console.log('New details');
     console.log(updatedCar);
   }
+
+  async deleteCar(carId) {
+    const car = await this.database.getCar(carId);
+    if (car) {
+      await this.database.deleteCar(carId);
+      console.log(`The car ${carId} has been deleted.`)
+    } else {
+      console.log(`The car with the ID ${carId} does not exist.`);
+    }
+  }
+  
+  async deleteUser(username) {
+    const user = this.database.getUser(username);
+    if (user) {
+      await this.database.deleteUser(username);
+      console.log(`The user ${username} has been deleted.`);
+    } else {
+      console.log(`The user ${username} does not exist.`);
+    }
+  }
 }
 
 module.exports = CarMarketSync;

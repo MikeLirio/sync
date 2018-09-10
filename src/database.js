@@ -13,6 +13,10 @@ class Database {
     this.config = configuration;
   }
 
+  /* ===================================================================================== */
+  /* Useful Methods */
+  /* ===================================================================================== */
+
   getDataBasePath() {
     return this.config.path + this.config.name;
   }
@@ -20,6 +24,17 @@ class Database {
   existsDB(database) {
     return fileSystem.existsSync(database);
   }
+
+  async getCarsFromUser(user) {
+    const db = await this.getDataBaseInstance();
+    const sql = 'SELECT LocalCars.* FROM LocalCars, LocaluserOwnCar WHERE LocaluserOwnCar.user = ? AND LocalUserOwnCar.carId = LocalCars.uuid';
+    return await this.getAsyncSQL(db, db.all(sql, user), `Getting cars of ${user}`);
+  }
+
+
+  /* ===================================================================================== */
+  /* Initialitation/Instance of the data base */
+  /* ===================================================================================== */
 
   async createTables(database) {
     try {
@@ -62,6 +77,10 @@ class Database {
     return db;
   }
 
+  /* ===================================================================================== */
+  /* User Table */
+  /* ===================================================================================== */
+
   async getUser(username) {
     debug(`Getting the user ${username}...`);
     const db = await this.getDataBaseInstance();
@@ -75,7 +94,7 @@ class Database {
     .catch(errorToClose => console.error(errorToClose));
     return user;
   }
-  
+
   async addUser(username, password) {
     const db = await this.getDataBaseInstance();
     return await this.executeAsyncSQL(
@@ -85,6 +104,30 @@ class Database {
     );
   }
   
+  async deleteUser(username) {
+    const carsToDelete = await this.getCarsFromUser(username);
+    const db = await this.getDataBaseInstance();
+    const listOfPromisesToDetele = [];
+    carsToDelete.forEach(car => {
+      debug(`Preparing promises to delete the car ${car.model}:${car.value}:${car.uuid}`);
+      listOfPromisesToDetele.push(db.run('DELETE FROM LocalUserOwnCar WHERE carId = ?', [car.uuid]));
+      listOfPromisesToDetele.push(db.run('DELETE FROM LocalCars WHERE uuid = ?', [car.uuid]));
+    });
+    listOfPromisesToDetele.push(db.run('DELETE FROM LocalUsers WHERE username = ?', [username]));
+    debug();
+    await this.execAsyncSQL(db, listOfPromisesToDetele, `Deleting the user ${username} and all the cars.`);
+  }
+  
+  /* ===================================================================================== */
+  /* Car Table */
+  /* ===================================================================================== */
+
+  async getCar(uuid) {
+    const db = await this.getDataBaseInstance();
+    const sql = 'SELECT * FROM LocalCars WHERE uuid = ?';
+    return await this.getAsyncSQL(db, db.all(sql, uuid), `Getting car ${uuid}`);
+  }
+
   async addCar(user, car) {
     const db = await this.getDataBaseInstance();
     car.uuid = uuidGenerator();
@@ -93,20 +136,22 @@ class Database {
       db.run('INSERT INTO LocalCars VALUES (?, ?, ?, 0, 1, 1)', [car.uuid, car.model, car.value]),
       db.run('INSERT INTO LocalUserOwnCar VALUES (?, ?, 0, 1, 1)', [user, car.uuid]),
     ];
-    const result = await this.insertAsyncSQL(db, promises, `Adding the car ${car.model}:${car.value} to ${user}`);
+    const result = await this.execAsyncSQL(db, promises, `Adding the car ${car.model}:${car.value} to ${user}.`);
     return result;
   }
   
-  async getCarsFromUser(user) {
+  // This delete not consider the sync way.
+  async deleteCar(carId) {
     const db = await this.getDataBaseInstance();
-    const sql = 'SELECT LocalCars.* FROM LocalCars, LocaluserOwnCar WHERE LocaluserOwnCar.user = ? AND LocalUserOwnCar.carId = LocalCars.uuid';
-    return await this.getAsyncSQL(db, db.all(sql, user), `Getting cars of ${user}`);
-  }
-
-  async getCar(uuid) {
-    const db = await this.getDataBaseInstance();
-    const sql = 'SELECT * FROM LocalCars WHERE uuid = ?';
-    return await this.getAsyncSQL(db, db.all(sql, uuid), `Getting car ${uuid}`);
+    debug(`Deleting the car ${carId}.`);
+    await Promise.all([
+      db.run('DELETE FROM LocalUserOwnCar WHERE carId = ?', [carId]),
+      db.run('DELETE FROM LocalCars WHERE uuid = ?', [carId]),
+    ])
+    .catch(error => console.error(error))
+    .finally(() =>  db.close())
+    .then(() => debug('Database closed.'))
+    .catch(errorToClose => console.error(errorToClose));
   }
   
   async updateCar(newDetails) {
@@ -122,7 +167,11 @@ class Database {
     .catch(errorToClose => console.error(errorToClose));
   }
 
-  async insertAsyncSQL(database, promises, debugMessage) {
+  /* ===================================================================================== */
+  /* Database generic SQL executers */
+  /* ===================================================================================== */
+
+  async execAsyncSQL(database, promises, debugMessage) {
     debug(debugMessage);
     return await Promise.all(promises)
     .catch(error => console.error(error))

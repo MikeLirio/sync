@@ -89,4 +89,20 @@ program
     new CarMarketSync().editCar(newDetails);
   });
 
+program
+  .command('deleteCar <carId>')
+  .alias('dc')
+  .description('Deleting a car')
+  .action(function(carId) {
+    new CarMarketSync().deleteCar(carId);
+  });
+
+program
+  .command('deleteUser <username>')
+  .alias('du')
+  .description('Deleting an user with all their cars')
+  .action(function(username) {
+    new CarMarketSync().deleteUser(username);
+  });
+
 program.parse(process.argv);
