@@ -1,17 +1,17 @@
 'use strict';
 
-const debug     = require('debug')('CarMarketSync');
-const Database  = require('./database');
-
+const Database = require('./database');
+const debug = require('./debug')
 const defaultConfiguration = require('../conf/default.json');
 
 class CarMarketSync {
 
   constructor(configuration) {
     if (configuration) {
+      debug('CarMarketSync:constructor', configuration);
       this.load(configuration);
     } else {
-      debug('Loading the default configuration.');
+      debug('CarMarketSync:constructor', 'Loading the default configuration.');
       this.load(defaultConfiguration);
     }
   }
@@ -23,7 +23,6 @@ class CarMarketSync {
 
   async userRegistered(username) {
     const user = await this.database.getUser(username);
-    debug('Users founded:', user);
     return !user || user.length === 0;
   }
 
@@ -43,22 +42,32 @@ class CarMarketSync {
   }
 
   async addCar(credentials, car) {
+    const username = credentials.username;
+    console.log(`Adding to user ${username} the car ${car.model}:${car.value}`);
     // TODO check password. 
-    const isLogged = await this.database.getUser(credentials.username);
+    const isLogged = await this.database.getUser(username);
     if (isLogged) {
-      await this.database.addCar(credentials.username, car);
+      await this.database.addCar(username, car);
       console.log(`Car added.`);
     } else {
-      console.log(`The user ${credentials.username} is not regstered.`);
+      console.log(`The user ${username} is not regstered.`);
     }
   }
 
-  async getCars(user) {
-    const cars = await this.database.getCarsFromUser(user); 
-    if (cars && cars.length > 0) {
-      console.log('Cars founded:\n', cars);
+  async getCars(username) {
+    const user = await this.database.getUser(username);
+    if (user) {
+      console.log(`Obtaining the cars of ${username}...`);
+      const cars = await this.database.getCarsFromUser(username); 
+      if (cars && cars.length > 0) {
+        let result = 'Cars founded:';
+        cars.forEach(car => result += `\n - ${car.model} : ${car.value} : ${car.uuid}`);
+        console.log(result);
+      } else {
+        console.log('No cars founded.');
+      }
     } else {
-      console.log('No cars founded.');
+      console.log(`The user ${username} is not registered.`);
     }
   }
 
@@ -66,10 +75,9 @@ class CarMarketSync {
     const car = await this.database.getCar(newDetails.uuid);
     await this.database.updateCar(newDetails);
     const updatedCar = await this.database.getCar(newDetails.uuid);
-    console.log('Old car details');
-    console.log(car);
-    console.log('New details');
-    console.log(updatedCar);
+    console.log(`Old car details: \n - ${car.model}:${car.value}\nNew details:\n - ${updatedCar.model}:${updatedCar.value}`);
+    debug('CarMarketSync:editCar:OldCar', car);
+    debug('CarMarketSync:editCar:UpdatedCar', updatedCar);
   }
 
   async deleteCar(carId) {
@@ -83,7 +91,7 @@ class CarMarketSync {
   }
   
   async deleteUser(username) {
-    const user = this.database.getUser(username);
+    const user = await this.database.getUser(username);
     if (user) {
       await this.database.deleteUser(username);
       console.log(`The user ${username} has been deleted.`);

@@ -1,6 +1,6 @@
 'use strict';
 
-const debug         = require('debug')('database');
+const debug         = require('./debug');
 const fileSystem    = require('fs');
 const sqlite        = require('sqlite');
 const Promise       = require('bluebird');
@@ -28,7 +28,10 @@ class Database {
   async getCarsFromUser(user) {
     const db = await this.getDataBaseInstance();
     const sql = 'SELECT LocalCars.* FROM LocalCars, LocaluserOwnCar WHERE LocaluserOwnCar.user = ? AND LocalUserOwnCar.carId = LocalCars.uuid';
-    return await this.getAsyncSQL(db, db.all(sql, user), `Getting cars of ${user}`);
+    return await this.getAsyncSQL(db, db.all(sql, user), {
+      tag: 'database',
+      msg: `Getting cars of ${user}`,
+    });
   }
 
 
@@ -54,7 +57,7 @@ class Database {
   }
   
   createTable(database, tableName, sql) {
-    debug(`Creating ${tableName} table...`);
+    debug('database:instance', `Creating ${tableName} table...`);
     return database.run(sql)
   }
 
@@ -68,10 +71,10 @@ class Database {
     const databasePath = this.getDataBasePath();
     let db;
     if (!this.existsDB(databasePath)) {
-      debug('The database does not exist. Creating it.');
+      debug('database:instance', 'The database does not exist. Creating it.');
       db = await this.initialize(databasePath);
     } else {
-      debug('getting db instance');
+      debug('database:instance', 'getting db instance');
       db = await sqlite.open(databasePath);
     }
     return db;
@@ -82,7 +85,7 @@ class Database {
   /* ===================================================================================== */
 
   async getUser(username) {
-    debug(`Getting the user ${username}...`);
+    debug('database:user', `Getting the user ${username}...`);
     const db = await this.getDataBaseInstance();
     let user;
     await Promise.all([
@@ -90,17 +93,20 @@ class Database {
     ])
     .catch(error => console.error(error))
     .finally(() =>  db.close())
-    .then(() => debug('Database closed.'))
+    .then(() => debug('database:user','Database closed.'))
     .catch(errorToClose => console.error(errorToClose));
     return user;
   }
 
   async addUser(username, password) {
     const db = await this.getDataBaseInstance();
-    return await this.executeAsyncSQL(
+    return await this.execAsyncSQL(
       db,
       [db.run( `INSERT INTO LocalUsers VALUES (?, ?, 0, 1, 1)`, [username, password])],
-      `Creating the user ${username}...`,
+      {
+        tag: 'database:user',
+        msg: `Creating the user ${username}...`,
+      }
     );
   }
   
@@ -109,13 +115,15 @@ class Database {
     const db = await this.getDataBaseInstance();
     const listOfPromisesToDetele = [];
     carsToDelete.forEach(car => {
-      debug(`Preparing promises to delete the car ${car.model}:${car.value}:${car.uuid}`);
+      debug('database:user', `Preparing promises to delete the car ${car.model}:${car.value}:${car.uuid}`);
       listOfPromisesToDetele.push(db.run('DELETE FROM LocalUserOwnCar WHERE carId = ?', [car.uuid]));
       listOfPromisesToDetele.push(db.run('DELETE FROM LocalCars WHERE uuid = ?', [car.uuid]));
     });
     listOfPromisesToDetele.push(db.run('DELETE FROM LocalUsers WHERE username = ?', [username]));
-    debug();
-    await this.execAsyncSQL(db, listOfPromisesToDetele, `Deleting the user ${username} and all the cars.`);
+    await this.execAsyncSQL(db, listOfPromisesToDetele, {
+      tag: 'database:user',
+      msg: `Deleting the user ${username} and all the cars.`,
+    });
   }
   
   /* ===================================================================================== */
@@ -125,7 +133,15 @@ class Database {
   async getCar(uuid) {
     const db = await this.getDataBaseInstance();
     const sql = 'SELECT * FROM LocalCars WHERE uuid = ?';
-    return await this.getAsyncSQL(db, db.all(sql, uuid), `Getting car ${uuid}`);
+    const car = await this.getAsyncSQL(db, db.all(sql, uuid), {
+      tag: 'database:car',
+      msg: `Getting car ${uuid}`,
+    });
+    if (car.length > 1) {
+      throw Error('It not allowed to have more than 1 car with the same uuid.');
+    } else {
+      return car[0];
+    }
   }
 
   async addCar(user, car) {
@@ -136,34 +152,36 @@ class Database {
       db.run('INSERT INTO LocalCars VALUES (?, ?, ?, 0, 1, 1)', [car.uuid, car.model, car.value]),
       db.run('INSERT INTO LocalUserOwnCar VALUES (?, ?, 0, 1, 1)', [user, car.uuid]),
     ];
-    const result = await this.execAsyncSQL(db, promises, `Adding the car ${car.model}:${car.value} to ${user}.`);
-    return result;
+    return await this.execAsyncSQL(db, promises, {
+      tag: 'database:car',
+      msg: `Adding the car ${car.model}:${car.value} to ${user}.`,
+    });
   }
   
   // This delete not consider the sync way.
   async deleteCar(carId) {
     const db = await this.getDataBaseInstance();
-    debug(`Deleting the car ${carId}.`);
+    debug('database:car', `Deleting the car ${carId}.`);
     await Promise.all([
       db.run('DELETE FROM LocalUserOwnCar WHERE carId = ?', [carId]),
       db.run('DELETE FROM LocalCars WHERE uuid = ?', [carId]),
     ])
     .catch(error => console.error(error))
     .finally(() =>  db.close())
-    .then(() => debug('Database closed.'))
+    .then(() => debug('database:car', 'Database closed.'))
     .catch(errorToClose => console.error(errorToClose));
   }
   
   async updateCar(newDetails) {
     const db = await this.getDataBaseInstance();
-    debug(`Updating the car ${newDetails.uuid}`);
+    debug('database:car', `Updating the car ${newDetails.uuid}`);
     const update = 'UPDATE LocalCars SET model = ?, value = ?, isOnServer = 0, isModified = 1, isActive = 1 WHERE uuid = ?';
     return await Promise.all([
       db.run(update, [newDetails.model, newDetails.value, newDetails.uuid]),
     ])
     .catch(error => console.error(error))
     .finally(() => db.close())
-    .then(() => debug('Database closed.'))
+    .then(() => debug('database:car', 'Database closed.'))
     .catch(errorToClose => console.error(errorToClose));
   }
 
@@ -171,24 +189,24 @@ class Database {
   /* Database generic SQL executers */
   /* ===================================================================================== */
 
-  async execAsyncSQL(database, promises, debugMessage) {
-    debug(debugMessage);
+  async execAsyncSQL(database, promises, debugOptions) {
+    debug(debugOptions.tag, debugOptions.msg);
     return await Promise.all(promises)
     .catch(error => console.error(error))
     .finally(() =>  database.close())
-    .then(() => debug('Database closed.'))
+    .then(() => debug(debugOptions.tag, 'Database closed.'))
     .catch(errorToClose => console.error(errorToClose));
   }
 
-  async getAsyncSQL(database, promise, debugMessage) {
+  async getAsyncSQL(database, promise, debugOptions) {
     let result = [];
-    debug(debugMessage);
+    debug(debugOptions.tag, debugOptions.msg);
     await Promise.all([
       result = promise,
     ])
     .catch(error => console.error(error))
     .finally(() =>  database.close())
-    .then(() => debug('Database closed.'))
+    .then(() => debug(debugOptions.tag, 'Database closed.'))
     .catch(errorToClose => console.error(errorToClose));
     return result;
   }

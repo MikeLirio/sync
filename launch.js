@@ -1,6 +1,6 @@
 'use strict';
 
-const debug         = require('debug')('launch');
+const debug         = require('./src/debug')
 const fileSystem    = require('fs');
 const CarMarketSync = require('./src/CarMarketSync');
 let program         = require('commander');
@@ -38,7 +38,7 @@ program
     debug(`Creating the user ${name}...`);
     let app;
     if (options.pathConf) {
-      debug(`Loading personalize configuration from ${options.pathConf}`);
+      debug(`register ${name}`, `Loading personalize configuration from ${options.pathConf}`);
       const configuration = fileSystem.readFileSync(options.pathConf);
       app = new CarMarketSync(configuration);
     } else {
@@ -61,8 +61,6 @@ program
       model: carModel,
       value,
     };
-    
-    debug(`Adding to user ${usr} the car ${car.model}:${car.value}`);
     const app = new CarMarketSync();
     app.addCar(credentials, car);
   });
@@ -72,7 +70,6 @@ program
   .alias('gc')
   .description('Get the cars of an user.')
   .action(function(usr) {
-    debug(`Obtaining the cars of ${usr}`);
     new CarMarketSync().getCars(usr);
   });
 
