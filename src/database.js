@@ -115,7 +115,7 @@ class Database {
     const db = await this.getDataBaseInstance();
     const listOfPromisesToDetele = [];
     carsToDelete.forEach(car => {
-      debug('database:user', `Preparing promises to delete the car ${car.model}:${car.value}:${car.uuid}`);
+      debug('database:user:car', `Preparing promises to delete the car ${car.model}:${car.value}:${car.uuid}`);
       listOfPromisesToDetele.push(db.run('DELETE FROM LocalUserOwnCar WHERE carId = ?', [car.uuid]));
       listOfPromisesToDetele.push(db.run('DELETE FROM LocalCars WHERE uuid = ?', [car.uuid]));
     });
@@ -147,15 +147,15 @@ class Database {
   async addCar(user, car) {
     const db = await this.getDataBaseInstance();
     car.uuid = uuidGenerator();
-    
     const promises = [
       db.run('INSERT INTO LocalCars VALUES (?, ?, ?, 0, 1, 1)', [car.uuid, car.model, car.value]),
       db.run('INSERT INTO LocalUserOwnCar VALUES (?, ?, 0, 1, 1)', [user, car.uuid]),
     ];
-    return await this.execAsyncSQL(db, promises, {
+    await this.execAsyncSQL(db, promises, {
       tag: 'database:car',
       msg: `Adding the car ${car.model}:${car.value} to ${user}.`,
     });
+    return car.uuid;
   }
   
   // This delete not consider the sync way.

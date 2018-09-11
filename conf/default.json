@@ -1,7 +1,0 @@
-{
-  "database": {
-    "path": "",
-    "name": "car.db",
-    "deleteOnFinish": false
-  }
-}
