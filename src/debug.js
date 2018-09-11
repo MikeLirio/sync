@@ -2,8 +2,8 @@
 
 const debugPackage = require('debug');
 
-function debug(tag, message) {
+function debug (tag, message) {
   debugPackage(tag)(message);
 }
 
-module.exports = debug
+module.exports = debug;

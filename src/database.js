@@ -1,15 +1,14 @@
 'use strict';
 
-const debug         = require('./debug');
-const fileSystem    = require('fs');
-const sqlite        = require('sqlite');
-const Promise       = require('bluebird');
-const schema        = require('./database.schema');
+const debug = require('./debug');
+const fileSystem = require('fs');
+const sqlite = require('sqlite');
+const Promise = require('bluebird');
+const schema = require('./database.schema');
 const uuidGenerator = require('uuid/v4');
 
 class Database {
-
-  constructor(configuration) {
+  constructor (configuration) {
     this.config = configuration;
   }
 
@@ -17,29 +16,29 @@ class Database {
   /* Useful Methods */
   /* ===================================================================================== */
 
-  getDataBasePath() {
+  getDataBasePath () {
     return this.config.path + this.config.name;
   }
 
-  existsDB(database) {
+  existsDB (database) {
     return fileSystem.existsSync(database);
   }
 
-  async getCarsFromUser(user) {
+  async getCarsFromUser (user) {
     const db = await this.getDataBaseInstance();
     const sql = 'SELECT LocalCars.* FROM LocalCars, LocaluserOwnCar WHERE LocaluserOwnCar.user = ? AND LocalUserOwnCar.carId = LocalCars.uuid';
-    return await this.getAsyncSQL(db, db.all(sql, user), {
+    const cars = await this.getAsyncSQL(db, db.all(sql, user), {
       tag: 'database',
-      msg: `Getting cars of ${user}`,
+      msg: `Getting cars of ${user}`
     });
+    return cars;
   }
-
 
   /* ===================================================================================== */
   /* Initialitation/Instance of the data base */
   /* ===================================================================================== */
 
-  async createTables(database) {
+  async createTables (database) {
     try {
       await Promise.all([
         this.createTable(database, 'SyncProperties', schema.SyncProperties.sql)
@@ -50,24 +49,24 @@ class Database {
         tablePromises.push(this.createTable(database, `Conflict${table.name}`, table.conflict));
       });
       await Promise.all(tablePromises);
-    } catch(error) {
-      console.error(error)
-      throw new Error(error)
+    } catch (error) {
+      console.error(error);
+      throw new Error(error);
     }
   }
-  
-  createTable(database, tableName, sql) {
+
+  createTable (database, tableName, sql) {
     debug('database:instance', `Creating ${tableName} table...`);
-    return database.run(sql)
+    return database.run(sql);
   }
 
-  async initialize(database) {
+  async initialize (database) {
     const db = await sqlite.open(database);
     await this.createTables(db);
     return db;
   }
 
-  async getDataBaseInstance() {
+  async getDataBaseInstance () {
     const databasePath = this.getDataBasePath();
     let db;
     if (!this.existsDB(databasePath)) {
@@ -84,33 +83,33 @@ class Database {
   /* User Table */
   /* ===================================================================================== */
 
-  async getUser(username) {
+  async getUser (username) {
     debug('database:user', `Getting the user ${username}...`);
     const db = await this.getDataBaseInstance();
     let user;
     await Promise.all([
-      user = db.get('SELECT * FROM LocalUsers WHERE username = ?', username),
+      user = db.get('SELECT * FROM LocalUsers WHERE username = ?', username)
     ])
-    .catch(error => console.error(error))
-    .finally(() =>  db.close())
-    .then(() => debug('database:user','Database closed.'))
-    .catch(errorToClose => console.error(errorToClose));
+      .catch(error => console.error(error))
+      .finally(() => db.close())
+      .then(() => debug('database:user', 'Database closed.'))
+      .catch(errorToClose => console.error(errorToClose));
     return user;
   }
 
-  async addUser(username, password) {
+  async addUser (username, password) {
     const db = await this.getDataBaseInstance();
-    return await this.execAsyncSQL(
+    await this.execAsyncSQL(
       db,
-      [db.run( `INSERT INTO LocalUsers VALUES (?, ?, 0, 1, 1)`, [username, password])],
+      [db.run(`INSERT INTO LocalUsers VALUES (?, ?, 0, 1, 1)`, [username, password])],
       {
         tag: 'database:user',
-        msg: `Creating the user ${username}...`,
+        msg: `Creating the user ${username}...`
       }
     );
   }
-  
-  async deleteUser(username) {
+
+  async deleteUser (username) {
     const carsToDelete = await this.getCarsFromUser(username);
     const db = await this.getDataBaseInstance();
     const listOfPromisesToDetele = [];
@@ -122,20 +121,20 @@ class Database {
     listOfPromisesToDetele.push(db.run('DELETE FROM LocalUsers WHERE username = ?', [username]));
     await this.execAsyncSQL(db, listOfPromisesToDetele, {
       tag: 'database:user',
-      msg: `Deleting the user ${username} and all the cars.`,
+      msg: `Deleting the user ${username} and all the cars.`
     });
   }
-  
+
   /* ===================================================================================== */
   /* Car Table */
   /* ===================================================================================== */
 
-  async getCar(uuid) {
+  async getCar (uuid) {
     const db = await this.getDataBaseInstance();
     const sql = 'SELECT * FROM LocalCars WHERE uuid = ?';
     const car = await this.getAsyncSQL(db, db.all(sql, uuid), {
       tag: 'database:car',
-      msg: `Getting car ${uuid}`,
+      msg: `Getting car ${uuid}`
     });
     if (car.length > 1) {
       throw Error('It not allowed to have more than 1 car with the same uuid.');
@@ -144,70 +143,77 @@ class Database {
     }
   }
 
-  async addCar(user, car) {
+  async addCar (user, car) {
     const db = await this.getDataBaseInstance();
     car.uuid = uuidGenerator();
     const promises = [
       db.run('INSERT INTO LocalCars VALUES (?, ?, ?, 0, 1, 1)', [car.uuid, car.model, car.value]),
-      db.run('INSERT INTO LocalUserOwnCar VALUES (?, ?, 0, 1, 1)', [user, car.uuid]),
+      db.run('INSERT INTO LocalUserOwnCar VALUES (?, ?, 0, 1, 1)', [user, car.uuid])
     ];
     await this.execAsyncSQL(db, promises, {
       tag: 'database:car',
-      msg: `Adding the car ${car.model}:${car.value} to ${user}.`,
+      msg: `Adding the car ${car.model}:${car.value} to ${user}.`
     });
     return car.uuid;
   }
-  
+
   // This delete not consider the sync way.
-  async deleteCar(carId) {
+  async deleteCar (carId) {
     const db = await this.getDataBaseInstance();
     debug('database:car', `Deleting the car ${carId}.`);
     await Promise.all([
       db.run('DELETE FROM LocalUserOwnCar WHERE carId = ?', [carId]),
-      db.run('DELETE FROM LocalCars WHERE uuid = ?', [carId]),
+      db.run('DELETE FROM LocalCars WHERE uuid = ?', [carId])
     ])
-    .catch(error => console.error(error))
-    .finally(() =>  db.close())
-    .then(() => debug('database:car', 'Database closed.'))
-    .catch(errorToClose => console.error(errorToClose));
+      .catch(error => console.error(error))
+      .finally(() => db.close())
+      .then(() => debug('database:car', 'Database closed.'))
+      .catch(errorToClose => console.error(errorToClose));
   }
-  
-  async updateCar(newDetails) {
+
+  async updateCar (newDetails) {
     const db = await this.getDataBaseInstance();
     debug('database:car', `Updating the car ${newDetails.uuid}`);
     const update = 'UPDATE LocalCars SET model = ?, value = ?, isOnServer = 0, isModified = 1, isActive = 1 WHERE uuid = ?';
-    return await Promise.all([
-      db.run(update, [newDetails.model, newDetails.value, newDetails.uuid]),
-    ])
-    .catch(error => console.error(error))
-    .finally(() => db.close())
-    .then(() => debug('database:car', 'Database closed.'))
-    .catch(errorToClose => console.error(errorToClose));
+    await Promise.all([
+      db.run(update, [newDetails.model, newDetails.value, newDetails.uuid])
+    ]).catch(error => console.error(error))
+      .finally(() => db.close())
+      .then(() => debug('database:car', 'Database closed.'))
+      .catch(errorToClose => console.error(errorToClose));
+  }
+
+  /* ===================================================================================== */
+  /* Sync operations */
+  /* ===================================================================================== */
+
+  async setAsyncData (dateTimeFromServer) {
+    // const db = await this.getDataBaseInstance();
   }
 
   /* ===================================================================================== */
   /* Database generic SQL executers */
   /* ===================================================================================== */
 
-  async execAsyncSQL(database, promises, debugOptions) {
+  async execAsyncSQL (database, promises, debugOptions) {
     debug(debugOptions.tag, debugOptions.msg);
-    return await Promise.all(promises)
-    .catch(error => console.error(error))
-    .finally(() =>  database.close())
-    .then(() => debug(debugOptions.tag, 'Database closed.'))
-    .catch(errorToClose => console.error(errorToClose));
+    await Promise.all(promises)
+      .catch(error => console.error(error))
+      .finally(() => database.close())
+      .then(() => debug(debugOptions.tag, 'Database closed.'))
+      .catch(errorToClose => console.error(errorToClose));
   }
 
-  async getAsyncSQL(database, promise, debugOptions) {
+  async getAsyncSQL (database, promise, debugOptions) {
     let result = [];
     debug(debugOptions.tag, debugOptions.msg);
     await Promise.all([
-      result = promise,
+      result = promise
     ])
-    .catch(error => console.error(error))
-    .finally(() =>  database.close())
-    .then(() => debug(debugOptions.tag, 'Database closed.'))
-    .catch(errorToClose => console.error(errorToClose));
+      .catch(error => console.error(error))
+      .finally(() => database.close())
+      .then(() => debug(debugOptions.tag, 'Database closed.'))
+      .catch(errorToClose => console.error(errorToClose));
     return result;
   }
 }

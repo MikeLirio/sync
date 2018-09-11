@@ -6,16 +6,16 @@ const develop = {
   app: {},
   database: {
     path: '',
-    name: 'car.db',
-  },
+    name: 'car.db'
+  }
 };
 
 const test = {
   app: {},
   database: {
     path: '',
-    name: ':memory:,',
-  },
+    name: ':memory:,'
+  }
 };
 
 const production = {};
@@ -23,7 +23,7 @@ const production = {};
 const config = {
   develop,
   test,
-  production,
-}
+  production
+};
 
 module.exports = config[env];

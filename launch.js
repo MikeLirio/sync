@@ -1,7 +1,7 @@
 'use strict';
 
 const CarMarketSync = require('./src/CarMarketSync');
-const program       = require('commander');
+const program = require('commander');
 
 /** Commands ------------------------------------------------------------------------
  * sync|s                                     | Synchronize the database.
@@ -20,7 +20,7 @@ program
   .command('sync')
   .alias('s')
   .description('Synchronize the database.')
-  .action(function() {
+  .action(function () {
     console.log('Work in progress...');
   });
 
@@ -28,7 +28,7 @@ program
   .command('register <name> <password>')
   .alias('r')
   .description('Create a new user in the system.')
-  .action(function(name, password) {
+  .action(function (name, password) {
     new CarMarketSync().register(name, password);
   });
 
@@ -36,10 +36,10 @@ program
   .command('addCar <usr> <carModel> <carValue>')
   .alias('ac')
   .description('Add a Car to an User.')
-  .action(function(usr, carModel, carValue) {
+  .action(function (usr, carModel, carValue) {
     new CarMarketSync().addCar(usr, {
       model: carModel,
-      value: carValue,
+      value: carValue
     });
   });
 
@@ -47,7 +47,7 @@ program
   .command('getCars <usr>')
   .alias('gc')
   .description('Get the cars of an user.')
-  .action(function(usr) {
+  .action(function (usr) {
     new CarMarketSync().getCars(usr);
   });
 
@@ -55,11 +55,11 @@ program
   .command('updateCar <model> <value> <uuid>')
   .alias('uc')
   .description('Modify details of a car.')
-  .action(function(carModel, carValue, uuid) {
+  .action(function (carModel, carValue, uuid) {
     new CarMarketSync().editCar({
       uuid,
       model: carModel,
-      value: carValue,
+      value: carValue
     });
   });
 
@@ -67,7 +67,7 @@ program
   .command('deleteCar <carId>')
   .alias('dc')
   .description('Deleting a car.')
-  .action(function(carId) {
+  .action(function (carId) {
     new CarMarketSync().deleteCar(carId);
   });
 
@@ -75,7 +75,7 @@ program
   .command('deleteUser <usr>')
   .alias('du')
   .description('Deleting an user with all their cars.')
-  .action(function(usr) {
+  .action(function (usr) {
     new CarMarketSync().deleteUser(usr);
   });
 
