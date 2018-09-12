@@ -1,6 +1,6 @@
 'use strict';
 
-const CarMarketSync = require('./src/CarMarketSync');
+const CarMarket = require('./src/CarMarket');
 const program = require('commander');
 
 /** Commands ------------------------------------------------------------------------
@@ -21,7 +21,7 @@ program
   .alias('s')
   .description('Synchronize the database.')
   .action(function () {
-    new CarMarketSync().synchronize();
+    new CarMarket().synchronize();
   });
 
 program
@@ -29,7 +29,7 @@ program
   .alias('ls')
   .description('Last time when the application was synchronize with the server.')
   .action(function () {
-    new CarMarketSync().lastSynchronization();
+    new CarMarket().lastSynchronization();
   });
 
 program
@@ -37,7 +37,7 @@ program
   .alias('r')
   .description('Create a new user in the system.')
   .action(function (name, password) {
-    new CarMarketSync().register(name, password);
+    new CarMarket().register(name, password);
   });
 
 program
@@ -45,7 +45,7 @@ program
   .alias('ac')
   .description('Add a Car to an User.')
   .action(function (usr, carModel, carValue) {
-    new CarMarketSync().addCar(usr, {
+    new CarMarket().addCar(usr, {
       model: carModel,
       value: carValue
     });
@@ -56,7 +56,7 @@ program
   .alias('gc')
   .description('Get the cars of an user.')
   .action(function (usr) {
-    new CarMarketSync().getCars(usr);
+    new CarMarket().getCars(usr);
   });
 
 program
@@ -64,7 +64,7 @@ program
   .alias('uc')
   .description('Modify details of a car.')
   .action(function (carModel, carValue, uuid) {
-    new CarMarketSync().editCar({
+    new CarMarket().editCar({
       uuid,
       model: carModel,
       value: carValue
@@ -76,7 +76,7 @@ program
   .alias('dc')
   .description('Deleting a car.')
   .action(function (carId) {
-    new CarMarketSync().deleteCar(carId);
+    new CarMarket().deleteCar(carId);
   });
 
 program
@@ -84,7 +84,7 @@ program
   .alias('du')
   .description('Deleting an user with all their cars.')
   .action(function (usr) {
-    new CarMarketSync().deleteUser(usr);
+    new CarMarket().deleteUser(usr);
   });
 
 program.parse(process.argv);
