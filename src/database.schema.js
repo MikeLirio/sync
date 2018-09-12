@@ -3,7 +3,7 @@
 // check how ID is created. (you can call it with rowid oid _rowid_)
 const SyncProperties = {
   name: 'SyncProperties',
-  sql: 'CREATE TABLE if not exists SyncProperties (lastSync INT)'
+  sql: 'CREATE TABLE if not exists SyncProperties (lastSync TEXT)'
 };
 
 const users = {

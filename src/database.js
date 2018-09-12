@@ -92,7 +92,7 @@ class Database {
     ])
       .catch(error => console.error(error))
       .finally(() => db.close())
-      .then(() => debug('database:user', 'Database closed.'))
+      .then(() => debug('database:instance', 'Database closed.'))
       .catch(errorToClose => console.error(errorToClose));
     return user;
   }
@@ -167,7 +167,7 @@ class Database {
     ])
       .catch(error => console.error(error))
       .finally(() => db.close())
-      .then(() => debug('database:car', 'Database closed.'))
+      .then(() => debug('database:instance', 'Database closed.'))
       .catch(errorToClose => console.error(errorToClose));
   }
 
@@ -179,7 +179,7 @@ class Database {
       db.run(update, [newDetails.model, newDetails.value, newDetails.uuid])
     ]).catch(error => console.error(error))
       .finally(() => db.close())
-      .then(() => debug('database:car', 'Database closed.'))
+      .then(() => debug('database:instance', 'Database closed.'))
       .catch(errorToClose => console.error(errorToClose));
   }
 
@@ -187,8 +187,30 @@ class Database {
   /* Sync operations */
   /* ===================================================================================== */
 
-  async setAsyncData (dateTimeFromServer) {
-    // const db = await this.getDataBaseInstance();
+  async setDateTimeFromServer (dateTimeFromServer) {
+    const db = await this.getDataBaseInstance();
+    await this.execAsyncSQL(db, [
+      db.run('INSERT INTO SyncProperties VALUES (?)', [dateTimeFromServer])
+    ], {
+      tag: 'database:sync:SyncProperties',
+      msg: 'Setting the date of the server: <' + dateTimeFromServer + '> : ' + new Date(dateTimeFromServer).toUTCString()
+    });
+  }
+
+  async getLastSynchronization () {
+    const db = await this.getDataBaseInstance();
+    const time = await this.getAsyncSQL(db, [
+      db.get('SELECT lastSync FROM SyncProperties ORDER BY rowid DESC LIMIT 1', [])
+    ], {
+      tag: 'database:sync',
+      msg: 'Getting the last time when the app was synchronize.'
+    });
+    if (time.length > 1) {
+      throw Error('Something wrong happens.');
+    } else {
+      debug('database:sync', time[0]);
+      return time[0];
+    }
   }
 
   /* ===================================================================================== */
@@ -200,7 +222,7 @@ class Database {
     await Promise.all(promises)
       .catch(error => console.error(error))
       .finally(() => database.close())
-      .then(() => debug(debugOptions.tag, 'Database closed.'))
+      .then(() => debug('database:instance', 'Database closed.'))
       .catch(errorToClose => console.error(errorToClose));
   }
 
@@ -212,7 +234,7 @@ class Database {
     ])
       .catch(error => console.error(error))
       .finally(() => database.close())
-      .then(() => debug(debugOptions.tag, 'Database closed.'))
+      .then(() => debug('database:instance', 'Database closed.'))
       .catch(errorToClose => console.error(errorToClose));
     return result;
   }

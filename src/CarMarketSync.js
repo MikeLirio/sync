@@ -105,8 +105,18 @@ class CarMarketSync {
     }
   }
 
-  async sync () {
+  async synchronize () {
+    const dateTimeFromServer = new Date().getTime();
+    this.database.setDateTimeFromServer(dateTimeFromServer);
+  }
 
+  async lastSynchronization () {
+    const time = await this.database.getLastSynchronization();
+    if (time) {
+      console.log(`Last Sync: ${new Date(time.lastSync).toUTCString()}`);
+    } else {
+      console.log('This APP has not been synchronize yet.');
+    }
   }
 }
 

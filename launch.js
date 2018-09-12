@@ -21,7 +21,15 @@ program
   .alias('s')
   .description('Synchronize the database.')
   .action(function () {
-    console.log('Work in progress...');
+    new CarMarketSync().synchronize();
+  });
+
+program
+  .command('lastSync')
+  .alias('ls')
+  .description('Last time when the application was synchronize with the server.')
+  .action(function () {
+    new CarMarketSync().lastSynchronization();
   });
 
 program
