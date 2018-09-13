@@ -39,11 +39,14 @@ class SyncService {
   }
 
   async getDateTimeFromServer () {
-    const requestOptions = this.config.server;
-    requestOptions.path = 'getDateTimeUTC';
     const url = `${this.baseURL}/getDateTimeUTC`;
+    const time = await this.makeGetRequest(url);
+    debug('server:response:dateTime', new Date(time.serverTime).toUTCString());
+    return time.serverTime;
+  }
 
-    const time = await new Promise(function (resolve, reject) {
+  async makeGetRequest (url) {
+    return new Promise(function (resolve, reject) {
       http.get(url, response => {
         const { statusCode } = response;
 
@@ -59,15 +62,13 @@ class SyncService {
           response.on('end', () => {
             const parsedData = JSON.parse(rawData);
             debug(`http:get:${statusCode}`, parsedData);
-            resolve(parsedData.serverTime);
+            resolve(parsedData);
           });
         }
       }).on('error', error => {
         console.error(error);
       });
     });
-    debug('server:response:dateTime', new Date(time).toUTCString());
-    return time;
   }
 }
 
