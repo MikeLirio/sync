@@ -34,47 +34,34 @@ class SyncService {
     } else {
       console.log('No conflicts founded.');
       const dateTimeFromServer = await this.getDateTimeFromServer();
-      const newsRows = {};
-      const updatedRows = {};
-      const deletedRows = {};
+      const rowsToSync = this.getRowsToSync();
       await this.database.setDateTimeFromServer(dateTimeFromServer);
     }
   }
 
-  async getAddedLocalValues () {
-
+  async getRowsToSync () {
+    const news = await this.getRows('newRows');
+    debug('SyncService:rows:new', news);
+    const modified = await this.getRows('modifiedRows');
+    debug('SyncService:rows:modified', modified);
+    const deleted = await this.getRows('deletedRows');
+    debug('SyncService:rows:deleted', deleted);
+    return {
+      news,
+      modified,
+      deleted
+    };
   }
 
-  async getModifiedLocalUsers () {
-
-  }
-
-  async getModifiedLocalCars () {
-
-  }
-
-  async getModifiedLocalUserOwnCar () {
-
-  }
-
-  async getModifiedLocalValues () {
-
-  }
-
-  async getDeletedLocalUsers () {
-
-  }
-
-  async getDeletedLocalCars () {
-
-  }
-
-  async getDeletedLocalUserOwnCar () {
-
-  }
-
-  async getDeletedLocalValues () {
-
+  async getRows (type) {
+    const users = await this.database.getValuesForSyncFrom('users', type);
+    const cars = await this.database.getValuesForSyncFrom('cars', type);
+    const userOwnCar = await this.database.getValuesForSyncFrom('userOwnCar', type);
+    return {
+      users,
+      cars,
+      userOwnCar
+    };
   }
 
   async getDateTimeFromServer () {

@@ -41,42 +41,14 @@ class Database {
     return cars;
   }
 
-  async getNewRows () {
-    const users = await this.getValuesForSyncFrom('users', 'newRows');
-    const cars = await this.getValuesForSyncFrom('cars', 'newRows');
-    const userOwnCar = await this.getValuesForSyncFrom('userOwnCar', 'newRows');
-    return {
-      users,
-      cars,
-      userOwnCar
-    };
-  }
-
-  async getModifiedRows () {
-    const users = await this.getValuesForSyncFrom('users', 'modifiedRows');
-    const cars = await this.getValuesForSyncFrom('cars', 'modifiedRows');
-    const userOwnCar = await this.getValuesForSyncFrom('userOwnCar', 'modifiedRows');
-    return {
-      users,
-      cars,
-      userOwnCar
-    };
-  }
-
-  async getDeletedRows () {
-    const users = await this.getValuesForSyncFrom('users', 'deletedRows');
-    const cars = await this.getValuesForSyncFrom('cars', 'deletedRows');
-    const userOwnCar = await this.getValuesForSyncFrom('userOwnCar', 'deletedRows');
-    return {
-      users,
-      cars,
-      userOwnCar
-    };
-  }
-
   async getValuesForSyncFrom (table, typeRow) {
-    const sql = this.table.get.typeRow;
-    debug('puta', sql);
+    const sql = this[table].get[typeRow];
+    const db = await this.getDataBaseInstance();
+    const result = await this.getAsyncSQL(db, db.all(sql), {
+      tag: `Database:sync:rows`,
+      msg: `Getting ${typeRow} rows from ${table}`
+    });
+    return result;
   }
 
   /* ===================================================================================== */
@@ -182,7 +154,7 @@ class Database {
 
   async getCar (uuid, prefix) {
     const db = await this.getDataBaseInstance();
-    const sql = this.cars.get(prefix || '');
+    const sql = this.cars.get.car(prefix);
     const car = await this.getAsyncSQL(db, db.all(sql, uuid), {
       tag: 'Database:car',
       msg: `Getting car ${uuid}`

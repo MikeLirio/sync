@@ -34,25 +34,31 @@ const users = {
             'isActive INT) WITHOUT ROWID'
   },
   operations: {
+    get: {
+      user (prefix = '') {
+        checkTablePrefix(prefix, 'Cars');
+        return `SELECT * FROM ${prefix}Users WHERE username = ? AND isActive = 1`;
+      },
+      users (prefix = '') {
+        checkTablePrefix(prefix, 'Cars');
+        return `SELECT * FROM ${prefix}Users WHERE isActive = 1`;
+      },
+      newRows: 'SELECT username, password FROM LocalUsers WHERE isFromServer = 0 AND isModified = 0 AND isActive = 1',
+      modifiedRows: 'SELECT username, password FROM LocalUsers WHERE isFromServer = 0 AND isModified = 1 AND isActive = 1',
+      deletedRows: 'SELECT username, password FROM LocalUsers WHERE isFromServer = 0 AND isModified = 0 AND isActive = 0'
+    },
     insert: {
       normal: 'INSERT INTO Users VALUES (?, ?, ?, ?)',
       conflict: 'INSERT INTO ConflictUsers VALUES (?, ?, ?)',
       local: 'INSERT INTO LocalUsers VALUES (?, ?, ?, ?, ?)'
     },
-    desactivate (prefix) {
+    desactivate (prefix = '') {
       checkTablePrefix(prefix, 'UserOwnCar');
       return `DELETE FROM ${prefix}Users WHERE username = ?`;
     },
-    delete (prefix) {
+    delete (prefix = '') {
       checkTablePrefix(prefix, 'UserOwnCar');
       return `DELETE FROM ${prefix}Users WHERE username = ?`;
-    },
-    get: {
-      user: 'SELECT * FROM Users WHERE username = ? AND isActive = 1',
-      users: 'SELECT * FROM Users WHERE isActive = 1',
-      newRows: 'SELECT username, password FROM LocalUsers WHERE isFromServer = 0 AND isModified = 0 AND isActive = 1',
-      modifiedRows: 'SELECT username, password FROM LocalUsers WHERE isFromServer = 0 AND isModified = 1 AND isActive = 1',
-      deletedRows: 'SELECT username, password FROM LocalUsers WHERE isFromServer = 0 AND isModified = 0 AND isActive = 0'
     }
   }
 };
@@ -78,9 +84,18 @@ const cars = {
             'isActive INT) WITHOUT ROWID'
   },
   operations: {
-    get (prefix) {
-      checkTablePrefix(prefix, 'Cars');
-      return `SELECT * FROM ${prefix}Cars WHERE uuid = ?`;
+    get: {
+      car (prefix = '') {
+        checkTablePrefix(prefix, 'Cars');
+        return `SELECT * FROM ${prefix}Cars WHERE uuid = ? AND isActive = 1`;
+      },
+      cars (prefix = '') {
+        checkTablePrefix(prefix, 'Cars');
+        return `SELECT * FROM ${prefix}Cars WHERE isActive = 1`;
+      },
+      newRows: 'SELECT uuid, model, value FROM LocalCars WHERE isFromServer = 0 AND isModified = 0 AND isActive = 1',
+      modifiedRows: 'SELECT uuid, model, value FROM LocalCars WHERE isFromServer = 0 AND isModified = 1 AND isActive = 1',
+      deletedRows: 'SELECT uuid, model, value FROM LocalCars WHERE isFromServer = 0 AND isModified = 0 AND isActive = 0'
     },
     insert: {
       normal: 'INSERT INTO Cars VALUES (?, ?, ?, ?, ?)',
@@ -96,7 +111,7 @@ const cars = {
       local: 'UPDATE LocalCars SET isModified = 1, isActive = 0 WHERE uuid = ?',
       conflict: 'UPDATE ConflictCars SET isActive = 0 WHERE uuid = ?'
     },
-    delete (prefix) {
+    delete (prefix = '') {
       checkTablePrefix(prefix, 'Cars');
       return `DELETE FROM ${prefix}Cars WHERE uuid = ?`;
     }
@@ -130,6 +145,19 @@ const userOwnCar = {
             'FOREIGN KEY(carId) REFERENCES Cars(uuid))'
   },
   operations: {
+    get: {
+      userOwnCar (prefix = '') {
+        checkTablePrefix(prefix, 'userOwnCar');
+        return `SELECT * FROM ${prefix}UserOwnCar WHERE uuid = ? AND isActive = 1`;
+      },
+      userOwnCars (prefix = '') {
+        checkTablePrefix(prefix, 'userOwnCar');
+        return `SELECT * FROM ${prefix}UserOwnCar WHERE user = ? AND isActive = 1`;
+      },
+      newRows: 'SELECT user, carId FROM LocalUserOwnCar WHERE isFromServer = 0 AND isModified = 0 AND isActive = 1',
+      modifiedRows: 'SELECT user, carId FROM LocalUserOwnCar WHERE isFromServer = 0 AND isModified = 1 AND isActive = 1',
+      deletedRows: 'SELECT user, carId FROM LocalUserOwnCar WHERE isFromServer = 0 AND isModified = 0 AND isActive = 0'
+    },
     insert: {
       normal: 'INSERT INTO UserOwnCar VALUES (?, ?, ?, ?)',
       conflict: 'INSERT INTO ConflictUserOwnCar VALUES (?, ?, ?)',
@@ -145,11 +173,11 @@ const userOwnCar = {
       local: 'UPDATE LocalUserOwnCar SET isModified = 1, isActive = 0 WHERE user = ?',
       conflict: 'UPDATE ConflictUserOwnCar SET isActive = 0 WHERE user = ?'
     },
-    delete (prefix) {
+    delete (prefix = '') {
       checkTablePrefix(prefix, 'UserOwnCar');
       return `DELETE FROM ${prefix}UserOwnCar WHERE carId = ?`;
     },
-    deleteAll (prefix) {
+    deleteAll (prefix = '') {
       checkTablePrefix(prefix, 'UserOwnCar');
       return `DELETE FROM ${prefix}UserOwnCar WHERE user = ?`;
     }
