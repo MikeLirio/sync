@@ -116,7 +116,7 @@ class CarMarket {
   async lastSynchronization () {
     const time = await this.database.getLastSynchronization();
     if (time) {
-      console.log(`Last Sync: ${new Date(time.lastSync).toUTCString()}`);
+      console.log(`Last Sync: ${new Date(parseInt(time.lastSync)).toUTCString()}`);
     } else {
       console.log('This APP has not been synchronize yet.');
     }

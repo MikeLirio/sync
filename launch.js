@@ -3,15 +3,20 @@
 const CarMarket = require('./src/CarMarket');
 const program = require('commander');
 
-/** Commands ------------------------------------------------------------------------
- * sync|s                                     | Synchronize the database.
- * register|r <name> <password>               | Create a new user in the system.
- * addCar|ac <usr> <carModel> <carValue>      | Add a Car to an User
- * getCars|gc <usr>                           | Get the cars of an user.
- * updateCar|uc <carModel> <carValue> <uuid>  | Modify details of a car
- * deleteCar|dc <carId>                       | Deleting a car
- * deleteUser|du <usr>                        | Deleting an user with all their cars
- -------------------------------------------------------------------------------- **/
+/* --------------------------------------------------------------------------------------------------------
+Options: --------------------------------------------------------------------------------------------------
+  -v, --version                          | output the version number
+  -h, --help                             | output usage information
+Commands: ------------------------------------------------------------------------------------------------
+  sync|s                                 | Synchronize the database.
+  lastSync|ls                            | Last time when the application was synchronize with the server.
+  register|r <name> <password>           | Create a new user in the system.
+  addCar|ac <usr> <carModel> <carValue>  | Add a Car to an User.
+  getCars|gc <usr>                       | Get the cars of an user.
+  updateCar|uc <model> <value> <uuid>    | Modify details of a car.
+  deleteCar|dc <carId>                   | Deleting a car.
+  deleteUser|du <usr>                    | Deleting an user with all their cars.
+-------------------------------------------------------------------------------------------------------- */
 
 program
   .version('0.1.0', '-v, --version');

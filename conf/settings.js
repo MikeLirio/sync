@@ -10,10 +10,16 @@ const develop = {
   },
   server: {
     mock: true,
-    host: 'server.mock',
-    port: '8080',
-    protocol: 'http:',
-    rejectUnauthorized: false
+    options: {
+      host: 'server.mock',
+      port: '8080',
+      protocol: 'http:',
+      rejectUnauthorized: false
+    },
+    endpoints: {
+      getServerTime: 'getDateTimeUTC',
+      synchronization: 'sync'
+    }
   }
 };
 
@@ -25,10 +31,16 @@ const test = {
   },
   server: {
     mock: true,
-    host: 'server.mock',
-    port: '8080',
-    protocol: 'http:',
-    rejectUnauthorized: false
+    options: {
+      host: 'server.mock',
+      port: '8080',
+      protocol: 'http:',
+      rejectUnauthorized: false
+    },
+    endpoints: {
+      getServerTime: 'getDateTimeUTC',
+      synchronization: 'sync'
+    }
   }
 };
 

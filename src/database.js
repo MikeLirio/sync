@@ -4,12 +4,16 @@ const debug = require('./debug');
 const fileSystem = require('fs');
 const sqlite = require('sqlite');
 const Promise = require('bluebird');
-const schema = require('./database.schema');
+const { tables, syncProperties, operations } = require('./database.schema');
 const uuidGenerator = require('uuid/v4');
 
 class Database {
   constructor (configuration) {
     this.config = configuration;
+    this.get = operations.get;
+    this.users = tables.users.operations;
+    this.cars = tables.cars.operations;
+    this.userOwnCar = tables.userOwnCar.operations;
   }
 
   /* ===================================================================================== */
@@ -24,14 +28,55 @@ class Database {
     return database === ':memory:' || fileSystem.existsSync(database);
   }
 
+  isNewRow (localObj) {
+    return localObj.isFromServer === 0 && localObj.isModified === 0 && localObj.isActive === 1;
+  }
+
   async getCarsFromUser (user) {
     const db = await this.getDataBaseInstance();
-    const sql = 'SELECT LocalCars.* FROM LocalCars, LocaluserOwnCar WHERE LocaluserOwnCar.user = ? AND LocalUserOwnCar.carId = LocalCars.uuid';
-    const cars = await this.getAsyncSQL(db, db.all(sql, user), {
+    const cars = await this.getAsyncSQL(db, db.all(this.get.carsFromUser, user), {
       tag: 'Database',
       msg: `Getting cars of ${user}`
     });
     return cars;
+  }
+
+  async getNewRows () {
+    const users = await this.getValuesForSyncFrom('users', 'newRows');
+    const cars = await this.getValuesForSyncFrom('cars', 'newRows');
+    const userOwnCar = await this.getValuesForSyncFrom('userOwnCar', 'newRows');
+    return {
+      users,
+      cars,
+      userOwnCar
+    };
+  }
+
+  async getModifiedRows () {
+    const users = await this.getValuesForSyncFrom('users', 'modifiedRows');
+    const cars = await this.getValuesForSyncFrom('cars', 'modifiedRows');
+    const userOwnCar = await this.getValuesForSyncFrom('userOwnCar', 'modifiedRows');
+    return {
+      users,
+      cars,
+      userOwnCar
+    };
+  }
+
+  async getDeletedRows () {
+    const users = await this.getValuesForSyncFrom('users', 'deletedRows');
+    const cars = await this.getValuesForSyncFrom('cars', 'deletedRows');
+    const userOwnCar = await this.getValuesForSyncFrom('userOwnCar', 'deletedRows');
+    return {
+      users,
+      cars,
+      userOwnCar
+    };
+  }
+
+  async getValuesForSyncFrom (table, typeRow) {
+    const sql = this.table.get.typeRow;
+    debug('puta', sql);
   }
 
   /* ===================================================================================== */
@@ -41,12 +86,14 @@ class Database {
   async createTables (database) {
     try {
       await Promise.all([
-        this.createTable(database, 'SyncProperties', schema.SyncProperties.sql)
+        this.createTable(database, 'SyncProperties', syncProperties.table)
       ]);
       let tablePromises = [];
-      schema.tables.forEach(table => {
-        tablePromises.push(this.createTable(database, `Local${table.name}`, table.local));
-        tablePromises.push(this.createTable(database, `Conflict${table.name}`, table.conflict));
+      const arrayTables = [tables.users, tables.cars, tables.userOwnCar];
+      arrayTables.forEach(table => {
+        tablePromises.push(this.createTable(database, `${table.name}`, table.tables.normal));
+        tablePromises.push(this.createTable(database, `Local${table.name}`, table.tables.local));
+        tablePromises.push(this.createTable(database, `Conflict${table.name}`, table.tables.conflict));
       });
       await Promise.all(tablePromises);
     } catch (error) {
@@ -88,7 +135,7 @@ class Database {
     const db = await this.getDataBaseInstance();
     let user;
     await Promise.all([
-      user = db.get('SELECT * FROM LocalUsers WHERE username = ?', username)
+      user = db.get(this.users.get.user, username)
     ])
       .catch(error => console.error(error))
       .finally(() => db.close())
@@ -99,9 +146,13 @@ class Database {
 
   async addUser (username, password) {
     const db = await this.getDataBaseInstance();
+    const time = new Date().getTime();
     await this.execAsyncSQL(
       db,
-      [db.run(`INSERT INTO LocalUsers VALUES (?, ?, 0, 1, 1)`, [username, password])],
+      [
+        db.run(this.users.insert.normal, [username, password, time, 1]),
+        db.run(this.users.insert.local, [username, password, 0, 0, 1])
+      ],
       {
         tag: 'Database:user',
         msg: `Creating the user ${username}...`
@@ -115,10 +166,10 @@ class Database {
     const listOfPromisesToDetele = [];
     carsToDelete.forEach(car => {
       debug('Database:user:car', `Preparing promises to delete the car ${car.model}:${car.value}:${car.uuid}`);
-      listOfPromisesToDetele.push(db.run('DELETE FROM LocalUserOwnCar WHERE carId = ?', [car.uuid]));
-      listOfPromisesToDetele.push(db.run('DELETE FROM LocalCars WHERE uuid = ?', [car.uuid]));
+      listOfPromisesToDetele.push(db.run(this.cars.delete(''), [car.uuid]));
     });
-    listOfPromisesToDetele.push(db.run('DELETE FROM LocalUsers WHERE username = ?', [username]));
+    listOfPromisesToDetele.push(db.run(this.userOwnCar.deleteAll(''), [username]));
+    listOfPromisesToDetele.push(db.run(this.users.delete(''), [username]));
     await this.execAsyncSQL(db, listOfPromisesToDetele, {
       tag: 'Database:user',
       msg: `Deleting the user ${username} and all the cars.`
@@ -129,9 +180,9 @@ class Database {
   /* Car Table */
   /* ===================================================================================== */
 
-  async getCar (uuid) {
+  async getCar (uuid, prefix) {
     const db = await this.getDataBaseInstance();
-    const sql = 'SELECT * FROM LocalCars WHERE uuid = ?';
+    const sql = this.cars.get(prefix || '');
     const car = await this.getAsyncSQL(db, db.all(sql, uuid), {
       tag: 'Database:car',
       msg: `Getting car ${uuid}`
@@ -145,10 +196,14 @@ class Database {
 
   async addCar (user, car) {
     const db = await this.getDataBaseInstance();
+    const time = new Date().getTime();
     car.uuid = uuidGenerator();
     const promises = [
-      db.run('INSERT INTO LocalCars VALUES (?, ?, ?, 0, 1, 1)', [car.uuid, car.model, car.value]),
-      db.run('INSERT INTO LocalUserOwnCar VALUES (?, ?, 0, 1, 1)', [user, car.uuid])
+      db.run(this.cars.insert.normal, [car.uuid, car.model, car.value, time, 1]),
+      db.run(this.cars.insert.local, [car.uuid, car.model, car.value, 0, 0, 1]),
+
+      db.run(this.userOwnCar.insert.normal, [user, car.uuid, time, 1]),
+      db.run(this.userOwnCar.insert.local, [user, car.uuid, 0, 0, 1])
     ];
     await this.execAsyncSQL(db, promises, {
       tag: 'Database:car',
@@ -162,8 +217,11 @@ class Database {
     const db = await this.getDataBaseInstance();
     debug('Database:car', `Deleting the car ${carId}.`);
     await Promise.all([
-      db.run('DELETE FROM LocalUserOwnCar WHERE carId = ?', [carId]),
-      db.run('DELETE FROM LocalCars WHERE uuid = ?', [carId])
+      db.run(this.userOwnCar.delete(''), [carId]),
+      db.run(this.userOwnCar.delete('Local'), [carId]),
+
+      db.run(this.cars.delete(''), [carId]),
+      db.run(this.cars.delete('Local'), [carId])
     ])
       .catch(error => console.error(error))
       .finally(() => db.close())
@@ -172,11 +230,19 @@ class Database {
   }
 
   async updateCar (newDetails) {
-    const db = await this.getDataBaseInstance();
     debug('Database:car', `Updating the car ${newDetails.uuid}`);
-    const update = 'UPDATE LocalCars SET model = ?, value = ?, isOnServer = 0, isModified = 1, isActive = 1 WHERE uuid = ?';
+    const localCar = await this.getCar(newDetails.uuid, 'Local');
+    const time = new Date().getTime();
+    const db = await this.getDataBaseInstance();
     await Promise.all([
-      db.run(update, [newDetails.model, newDetails.value, newDetails.uuid])
+      db.run(this.cars.update.normal, [newDetails.model, newDetails.value, time, newDetails.uuid]),
+      db.run(this.cars.update.local, [
+        newDetails.model,
+        newDetails.value,
+        0,
+        this.isNewRow(localCar) ? 0 : 1,
+        1,
+        newDetails.uuid])
     ]).catch(error => console.error(error))
       .finally(() => db.close())
       .then(() => debug('Database:instance', 'Database closed.'))
@@ -190,7 +256,7 @@ class Database {
   async setDateTimeFromServer (dateTimeFromServer) {
     const db = await this.getDataBaseInstance();
     await this.execAsyncSQL(db, [
-      db.run('INSERT INTO SyncProperties VALUES (?)', [dateTimeFromServer])
+      db.run(syncProperties.insert, [`${dateTimeFromServer}`])
     ], {
       tag: 'Database:sync:SyncProperties',
       msg: 'Setting the date of the server: <' + dateTimeFromServer + '> : ' + new Date(dateTimeFromServer).toUTCString()
@@ -200,7 +266,7 @@ class Database {
   async getLastSynchronization () {
     const db = await this.getDataBaseInstance();
     const time = await this.getAsyncSQL(db, [
-      db.get('SELECT lastSync FROM SyncProperties ORDER BY rowid DESC LIMIT 1', [])
+      db.get(syncProperties.getLast)
     ], {
       tag: 'Database:sync',
       msg: 'Getting the last time when the app was synchronize.'
@@ -216,7 +282,7 @@ class Database {
   async getConflictsFrom (table) {
     const db = await this.getDataBaseInstance();
     const result = await this.getAsyncSQL(db,
-      db.all(`SELECT * FROM ${table}`), {
+      db.all(`SELECT * FROM ${table} WHERE isActive = 1`), {
         tag: 'Database:sync:conflicts',
         msg: `Getting conflicts from ${table}`
       });
@@ -233,6 +299,29 @@ class Database {
 
   getConflictsConflictUserOwnCar () {
     return this.getConflictsFrom('ConflictUserOwnCar');
+  }
+
+  async getAddedLocalValues (sql, table) {
+    const db = await this.getDataBaseInstance();
+    const result = await this.getAsyncSQL(db,
+      db.all(sql), {
+        tag: 'Database:sync:added',
+        msg: `Getting new values from ${table}`
+      });
+    return result;
+  }
+
+  getAddedLocalUsers () {
+    return this.getAddedLocalValues('SELECT username, password FROM LocalUsers WHERE isOnServer = 0 AND',
+      'LocalUsers');
+  }
+
+  getAddedLocalCars () {
+    return this.getAddedLocalValues('LocalCars');
+  }
+
+  getAddedLocalUserOwnCar () {
+    return this.getAddedLocalValues('LocalUserOwnCar');
   }
 
   /* ===================================================================================== */

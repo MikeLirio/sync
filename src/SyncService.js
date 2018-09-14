@@ -8,7 +8,7 @@ class SyncService {
   constructor (configuration) {
     this.config = configuration;
     this.server = configuration.server;
-    this.baseURL = `${this.server.protocol}//${this.server.host}:${this.server.port}`;
+    this.baseURL = `${this.server.options.protocol}//${this.server.options.host}:${this.server.options.port}`;
     debug('server:mock', this.config.server.mock);
     if (this.config.server.mock) {
       require('../test/mockServer');
@@ -34,12 +34,51 @@ class SyncService {
     } else {
       console.log('No conflicts founded.');
       const dateTimeFromServer = await this.getDateTimeFromServer();
+      const newsRows = {};
+      const updatedRows = {};
+      const deletedRows = {};
       await this.database.setDateTimeFromServer(dateTimeFromServer);
     }
   }
 
+  async getAddedLocalValues () {
+
+  }
+
+  async getModifiedLocalUsers () {
+
+  }
+
+  async getModifiedLocalCars () {
+
+  }
+
+  async getModifiedLocalUserOwnCar () {
+
+  }
+
+  async getModifiedLocalValues () {
+
+  }
+
+  async getDeletedLocalUsers () {
+
+  }
+
+  async getDeletedLocalCars () {
+
+  }
+
+  async getDeletedLocalUserOwnCar () {
+
+  }
+
+  async getDeletedLocalValues () {
+
+  }
+
   async getDateTimeFromServer () {
-    const url = `${this.baseURL}/getDateTimeUTC`;
+    const url = `${this.baseURL}/${this.server.endpoints.getServerTime}`;
     const time = await this.makeGetRequest(url);
     debug('server:response:dateTime', new Date(time.serverTime).toUTCString());
     return time.serverTime;
