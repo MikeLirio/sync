@@ -17,8 +17,14 @@ const develop = {
       rejectUnauthorized: false
     },
     endpoints: {
-      getServerTime: 'getDateTimeUTC',
-      synchronization: 'sync'
+      getServerTime: {
+        path: 'getDateTimeUTC',
+        method: 'GET'
+      },
+      synchronization: {
+        path: '/synchronize',
+        method: 'POST'
+      }
     }
   }
 };
@@ -38,8 +44,14 @@ const test = {
       rejectUnauthorized: false
     },
     endpoints: {
-      getServerTime: 'getDateTimeUTC',
-      synchronization: 'sync'
+      getServerTime: {
+        path: 'getDateTimeUTC',
+        method: 'GET'
+      },
+      synchronization: {
+        path: 'synchronize',
+        method: 'POST'
+      }
     }
   }
 };

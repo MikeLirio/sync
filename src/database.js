@@ -35,7 +35,7 @@ class Database {
   async getCarsFromUser (user) {
     const db = await this.getDataBaseInstance();
     const cars = await this.getAsyncSQL(db, db.all(this.get.carsFromUser, user), {
-      tag: 'Database',
+      tag: 'Database:get',
       msg: `Getting cars of ${user}`
     });
     return cars;
@@ -106,8 +106,9 @@ class Database {
     debug('Database:user', `Getting the user ${username}...`);
     const db = await this.getDataBaseInstance();
     let user;
+    console.log(this.users.get.user());
     await Promise.all([
-      user = db.get(this.users.get.user, username)
+      user = db.get(this.users.get.user(), username)
     ])
       .catch(error => console.error(error))
       .finally(() => db.close())
@@ -226,6 +227,7 @@ class Database {
   /* ===================================================================================== */
 
   async setDateTimeFromServer (dateTimeFromServer) {
+    debug('Database:setDateTimeFromServer', dateTimeFromServer);
     const db = await this.getDataBaseInstance();
     await this.execAsyncSQL(db, [
       db.run(syncProperties.insert, [`${dateTimeFromServer}`])
@@ -271,29 +273,6 @@ class Database {
 
   getConflictsConflictUserOwnCar () {
     return this.getConflictsFrom('ConflictUserOwnCar');
-  }
-
-  async getAddedLocalValues (sql, table) {
-    const db = await this.getDataBaseInstance();
-    const result = await this.getAsyncSQL(db,
-      db.all(sql), {
-        tag: 'Database:sync:added',
-        msg: `Getting new values from ${table}`
-      });
-    return result;
-  }
-
-  getAddedLocalUsers () {
-    return this.getAddedLocalValues('SELECT username, password FROM LocalUsers WHERE isOnServer = 0 AND',
-      'LocalUsers');
-  }
-
-  getAddedLocalCars () {
-    return this.getAddedLocalValues('LocalCars');
-  }
-
-  getAddedLocalUserOwnCar () {
-    return this.getAddedLocalValues('LocalUserOwnCar');
   }
 
   /* ===================================================================================== */

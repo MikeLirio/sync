@@ -9,7 +9,7 @@ class SyncService {
     this.config = configuration;
     this.server = configuration.server;
     this.baseURL = `${this.server.options.protocol}//${this.server.options.host}:${this.server.options.port}`;
-    debug('server:mock', this.config.server.mock);
+    debug('SyncService:server:mock', this.config.server.mock);
     if (this.config.server.mock) {
       require('../test/mockServer');
     }
@@ -34,9 +34,40 @@ class SyncService {
     } else {
       console.log('No conflicts founded.');
       const dateTimeFromServer = await this.getDateTimeFromServer();
-      const rowsToSync = this.getRowsToSync();
+      const rowsToSync = await this.getRowsToSync();
+      const rowsToSyncStringify = JSON.stringify(rowsToSync);
+      const optionRequest = {
+        rejectUnauthorized: this.server.options.rejectUnauthorized,
+        protocol: this.server.options.protocol,
+        hostname: this.server.options.host,
+        port: this.server.options.port,
+        method: this.server.endpoints['synchronization'].method,
+        path: this.server.endpoints['synchronization'].path,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(rowsToSyncStringify)
+        }
+      };
+      const syncResponse = await this.postRequest(optionRequest, rowsToSyncStringify);
+      this.synchronizeLocalData(syncResponse);
+      if (await this.checkConflicts()) {
+        console.log('Conflicts appear.');
+        this.handleConflicts();
+      } else {
+        console.log('No conflicts generated.');
+      }
       await this.database.setDateTimeFromServer(dateTimeFromServer);
     }
+  }
+
+  synchronizeLocalData (syncResponse) {
+    // TODO finish it
+    debug('SyncService:sync:localData', 'work in progress');
+  }
+
+  handleConflicts () {
+    // TODO finish it
+    debug('SyncService:sync:conflicts', 'work in progress');
   }
 
   async getRowsToSync () {
@@ -65,19 +96,22 @@ class SyncService {
   }
 
   async getDateTimeFromServer () {
-    const url = `${this.baseURL}/${this.server.endpoints.getServerTime}`;
-    const time = await this.makeGetRequest(url);
-    debug('server:response:dateTime', new Date(time.serverTime).toUTCString());
+    const url = `${this.baseURL}/${this.server.endpoints.getServerTime.path}`;
+    const time = await this.getRequest(url);
+    debug('SyncService:server:response:dateTime', new Date(time.serverTime).toUTCString());
+    if (!time || !time.serverTime) {
+      throw new Error('Something happens with the request to the server.');
+    }
     return time.serverTime;
   }
 
-  async makeGetRequest (url) {
+  async postRequest (options, data) {
     return new Promise(function (resolve, reject) {
-      http.get(url, response => {
+      const postRequest = http.request(options, function (response) {
+        response.setEncoding('utf8');
         const { statusCode } = response;
-
         if (statusCode !== 200) {
-          debug(`http:get:error:${statusCode}`, response.statusCode);
+          debug(`SyncService:http:post:error:${statusCode}`, response.statusCode);
           response.consume();
           reject(response);
         } else {
@@ -87,12 +121,43 @@ class SyncService {
           });
           response.on('end', () => {
             const parsedData = JSON.parse(rawData);
-            debug(`http:get:${statusCode}`, parsedData);
+            debug(`SyncService:http:post:${statusCode}`, parsedData);
+            resolve(parsedData);
+          });
+        }
+      })
+        .on('error', error => {
+          console.error(error);
+          reject(error);
+        });
+
+      postRequest.write(data);
+      postRequest.end();
+    });
+  }
+
+  async getRequest (url) {
+    return new Promise(function (resolve, reject) {
+      http.get(url, response => {
+        const { statusCode } = response;
+        if (statusCode !== 200) {
+          debug(`SyncService:http:get:error:${statusCode}`, response.statusCode);
+          response.consume();
+          reject(response);
+        } else {
+          let rawData = '';
+          response.on('data', chunk => {
+            rawData += chunk;
+          });
+          response.on('end', () => {
+            const parsedData = JSON.parse(rawData);
+            debug(`SyncService:http:get:${statusCode}`, parsedData);
             resolve(parsedData);
           });
         }
       }).on('error', error => {
         console.error(error);
+        reject(error);
       });
     });
   }
