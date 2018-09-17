@@ -114,7 +114,7 @@ class CarMarket {
 
   async deleteUser (usr) {
     if (await this.checkUser(usr)) {
-      await this.database.deleteUser(usr);
+      await this.database.desactivateUser(usr);
       console.log(`The user <${usr}> has been deleted.`);
     } else {
       console.log(`The user <${usr}> does not exist.`);

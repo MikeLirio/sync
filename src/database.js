@@ -177,9 +177,14 @@ class Database {
     carsToDelete.forEach(car => {
       debug('Database:user:car', `Preparing promises to delete the car ${car.model}:${car.value}:${car.uuid}`);
       listOfPromisesToDetele.push(db.run(this.cars.delete(''), [car.uuid]));
+      listOfPromisesToDetele.push(db.run(this.cars.delete('Local'), [car.uuid]));
     });
+
     listOfPromisesToDetele.push(db.run(this.userOwnCar.deleteAll(''), [username]));
+    listOfPromisesToDetele.push(db.run(this.userOwnCar.deleteAll('Local'), [username]));
+
     listOfPromisesToDetele.push(db.run(this.users.delete(''), [username]));
+    listOfPromisesToDetele.push(db.run(this.users.delete('Local'), [username]));
     await this.execAsyncSQL(db, listOfPromisesToDetele, {
       tag: 'Database:user',
       msg: `Deleting the user ${username} and all the cars.`
