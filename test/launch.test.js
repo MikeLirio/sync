@@ -9,50 +9,8 @@ require('./mockServer');
 
 process.env.NODE_ENV = 'test';
 const CarMarket = require('../src/CarMarket');
-
+const results = require('./expected.results');
 const now = new Date().getTime();
-
-const usersExpected = {
-  normal: [
-    {
-      username: 'Jhon',
-      password: '123',
-      ModifiedOn: `${now + 1000}`,
-      isActive: 1
-    }, {
-      username: 'Mike',
-      password: '123',
-      ModifiedOn: `${now}`,
-      isActive: 1
-    }, {
-      username: 'Sarah',
-      password: '123',
-      ModifiedOn: `${now}`,
-      isActive: 1
-    }
-  ],
-  local: [
-    {
-      username: 'Jhon',
-      password: '123',
-      isFromServer: 0,
-      isModified: 0,
-      isActive: 1
-    }, {
-      username: 'Mike',
-      password: '123',
-      isFromServer: 0,
-      isModified: 0,
-      isActive: 1
-    }, {
-      username: 'Sarah',
-      password: '123',
-      isFromServer: 0,
-      isModified: 0,
-      isActive: 1
-    }
-  ]
-};
 
 describe('CarMarket test Demo', function () {
   const app = new CarMarket();
@@ -67,12 +25,16 @@ describe('CarMarket test Demo', function () {
 
   describe('Flow', function () {
     it('Register users', async function () {
-      await app.register('Mike', 123);
-      await app.register('Sarah', 123);
+      await app.register('Mike', '123');
+      await app.register('Jhon', '123');
+      await app.register('Sarah', '123');
+      await app.changePassword('Sarah', '123', '987');
 
       this.clock.tick(1000);
 
-      await app.register('Jhon', 123);
+      await app.changePassword('Jhon', '123', '456');
+      await app.register('Jane', '123');
+      await app.deleteUser('Jane');
 
       const users = await app.database.getAllUsers();
       debug('Test:register:users', users);
@@ -80,8 +42,9 @@ describe('CarMarket test Demo', function () {
       const localUsers = await app.database.getAllUsers('Local');
       debug('Test:register:localUsers', localUsers);
 
-      users.should.deep.equal(usersExpected.normal);
-      localUsers.should.deep.equal(usersExpected.local);
-    });
+      const registerUsers = results.registerUsers(now);
+      users.should.deep.equal(registerUsers.normal);
+      localUsers.should.deep.equal(registerUsers.local);
+    }).timeout(5000);
   });
 });

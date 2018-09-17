@@ -26,8 +26,8 @@ program
   .command('sync')
   .alias('s')
   .description('Synchronize the database.')
-  .action(function () {
-    const result = new CarMarket().synchronize();
+  .action(async function () {
+    const result = await new CarMarket().synchronize();
     console.log(result);
   });
 
@@ -35,8 +35,8 @@ program
   .command('lastSync')
   .alias('ls')
   .description('Last time when the application was synchronize with the server.')
-  .action(function () {
-    const result = new CarMarket().lastSynchronization();
+  .action(async function () {
+    const result = await new CarMarket().lastSynchronization();
     console.log(result);
   });
 
@@ -44,8 +44,8 @@ program
   .command('register <name> <password>')
   .alias('r')
   .description('Create a new user in the system.')
-  .action(function (name, password) {
-    const result = new CarMarket().register(name, password);
+  .action(async function (name, password) {
+    const result = await new CarMarket().register(name, password);
     console.log(result);
   });
 
@@ -53,8 +53,8 @@ program
   .command('changePassword <username> <oldPassword> <newPassword>')
   .alias('cp')
   .description('Change the password of the user.')
-  .action(function (username, oldPassword, newPassword) {
-    const result = new CarMarket().changePassword(username, oldPassword, newPassword);
+  .action(async function (username, oldPassword, newPassword) {
+    const result = await new CarMarket().changePassword(username, oldPassword, newPassword);
     console.log(result);
   });
 
@@ -62,8 +62,8 @@ program
   .command('addCar <usr> <carModel> <carValue>')
   .alias('ac')
   .description('Add a Car to an User.')
-  .action(function (usr, carModel, carValue) {
-    const result = new CarMarket().addCar(usr, {
+  .action(async function (usr, carModel, carValue) {
+    const result = await new CarMarket().addCar(usr, {
       model: carModel,
       value: carValue
     });
@@ -74,8 +74,8 @@ program
   .command('getCars <usr>')
   .alias('gc')
   .description('Get the cars of an user.')
-  .action(function (usr) {
-    const result = new CarMarket().getCars(usr);
+  .action(async function (usr) {
+    const result = await new CarMarket().getCars(usr);
     console.log(result);
   });
 
@@ -83,8 +83,8 @@ program
   .command('updateCar <model> <value> <uuid>')
   .alias('uc')
   .description('Modify details of a car.')
-  .action(function (carModel, carValue, uuid) {
-    const result = new CarMarket().editCar({
+  .action(async function (carModel, carValue, uuid) {
+    const result = await new CarMarket().editCar({
       uuid,
       model: carModel,
       value: carValue
@@ -96,8 +96,8 @@ program
   .command('deleteCar <carId>')
   .alias('dc')
   .description('Deleting a car.')
-  .action(function (carId) {
-    const result = new CarMarket().deleteCar(carId);
+  .action(async function (carId) {
+    const result = await new CarMarket().deleteCar(carId);
     console.log(result);
   });
 
@@ -105,8 +105,8 @@ program
   .command('deleteUser <usr>')
   .alias('du')
   .description('Deleting an user with all their cars.')
-  .action(function (usr) {
-    const result = new CarMarket().deleteUser(usr);
+  .action(async function (usr) {
+    const result = await new CarMarket().deleteUser(usr);
     console.log(result);
   });
 

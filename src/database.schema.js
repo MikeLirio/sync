@@ -37,11 +37,11 @@ const users = {
     get: {
       user (prefix = '') {
         checkTablePrefix(prefix, 'Cars');
-        return `SELECT * FROM ${prefix}Users WHERE username = ? AND isActive = 1`;
+        return `SELECT * FROM ${prefix}Users WHERE username = ?`;
       },
       users (prefix = '') {
         checkTablePrefix(prefix, 'Cars');
-        return `SELECT * FROM ${prefix}Users WHERE isActive = 1`;
+        return `SELECT * FROM ${prefix}Users`;
       },
       newRows: 'SELECT username, password FROM LocalUsers WHERE isFromServer = 0 AND isModified = 0 AND isActive = 1',
       modifiedRows: 'SELECT username, password FROM LocalUsers WHERE isFromServer = 0 AND isModified = 1 AND isActive = 1',

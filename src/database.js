@@ -160,9 +160,8 @@ class Database {
   }
 
   async desactivateOrDeleteUser (username) {
-    const localUser = this.getUser(username, 'Local');
-    const deleteInsteadOfDesactivate = await this.isNewRow(localUser);
-    if (deleteInsteadOfDesactivate) {
+    const localUser = await this.getUser(username, 'Local');
+    if (await this.isNewRow(localUser)) {
       await this.deleteUser(username);
     } else {
       await this.desactivateUser(username);
@@ -249,9 +248,8 @@ class Database {
   }
 
   async desactivateOrDeleteCar (carId) {
-    const localCar = this.getCar(carId, 'Local');
-    const deleteInsteadOfDesactivate = await this.isNewRow(localCar);
-    if (deleteInsteadOfDesactivate) {
+    const localCar = await this.getCar(carId, 'Local');
+    if (await this.isNewRow(localCar)) {
       await this.deleteCar(carId);
     } else {
       await this.desactivateCar(carId);

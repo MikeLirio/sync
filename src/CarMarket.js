@@ -37,8 +37,7 @@ class CarMarket {
   }
 
   async register (usr, password) {
-    let result = '';
-    result = `Registering the user <${usr}>...`;
+    let result = `Registering the user <${usr}>...`;
     if (await this.checkUser(usr)) {
       result += `\nThe user <${usr}> already exists.`;
     } else {
