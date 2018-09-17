@@ -52,9 +52,14 @@ const users = {
       conflict: 'INSERT INTO ConflictUsers VALUES (?, ?, ?)',
       local: 'INSERT INTO LocalUsers VALUES (?, ?, ?, ?, ?)'
     },
-    desactivate (prefix = '') {
-      checkTablePrefix(prefix, 'UserOwnCar');
-      return `DELETE FROM ${prefix}Users WHERE username = ?`;
+    update: {
+      normal: 'UPDATE Users SET password = ?, ModifiedOn = ? WHERE username = ?',
+      local: 'UPDATE LocalUsers SET password = ?, isFromServer = 0, isModified = 1 WHERE username = ?'
+    },
+    desactivate: {
+      normal: 'UPDATE Users SET ModifiedOn = ?, isActive = 0 WHERE username = ?',
+      local: 'UPDATE LocalUsers SET isModified = 1, isActive = 0 WHERE username = ?',
+      conflict: 'UPDATE ConflictUsers SET isActive = 0 WHERE username = ?'
     },
     delete (prefix = '') {
       checkTablePrefix(prefix, 'UserOwnCar');

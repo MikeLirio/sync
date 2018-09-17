@@ -106,7 +106,6 @@ class Database {
     debug('Database:user', `Getting the user ${username}...`);
     const db = await this.getDataBaseInstance();
     let user;
-    console.log(this.users.get.user());
     await Promise.all([
       user = db.get(this.users.get.user(), username)
     ])
@@ -123,7 +122,7 @@ class Database {
     await this.execAsyncSQL(
       db,
       [
-        db.run(this.users.insert.normal, [username, password, time, 1]),
+        db.run(this.users.insert.normal, [username, password, `${time}`, 1]),
         db.run(this.users.insert.local, [username, password, 0, 0, 1])
       ],
       {
@@ -131,6 +130,44 @@ class Database {
         msg: `Creating the user ${username}...`
       }
     );
+  }
+
+  async updatePassword (username, newPassword) {
+    const db = await this.getDataBaseInstance();
+    const time = new Date().getTime() + '';
+    await this.execAsyncSQL(
+      db,
+      [
+        db.run(this.users.update.normal, [newPassword, `${time}`, username]),
+        db.run(this.users.update.local, [newPassword, username])
+      ],
+      {
+        tag: 'Database:user',
+        msg: `Updating the password...`
+      }
+    );
+  }
+
+  async desactivateUser (username) {
+    const carsToDesactivate = await this.getCarsFromUser(username);
+    const time = new Date().getTime();
+    const db = await this.getDataBaseInstance();
+    const listOfPromisesToDesactivate = [];
+    carsToDesactivate.forEach(car => {
+      debug('Database:user:car', `Preparing promises to desactivate the car ${car.model}:${car.value}:${car.uuid}`);
+      listOfPromisesToDesactivate.push(db.run(this.cars.desactivate.normal, [`${time}`, car.uuid]));
+      listOfPromisesToDesactivate.push(db.run(this.cars.desactivate.local, [car.uuid]));
+    });
+
+    listOfPromisesToDesactivate.push(db.run(this.userOwnCar.desactivateAll.normal, [`${time}`, username]));
+    listOfPromisesToDesactivate.push(db.run(this.userOwnCar.desactivateAll.local, [username]));
+
+    listOfPromisesToDesactivate.push(db.run(this.users.desactivate.normal, [`${time}`, username]));
+    listOfPromisesToDesactivate.push(db.run(this.users.desactivate.local, [username]));
+    await this.execAsyncSQL(db, listOfPromisesToDesactivate, {
+      tag: 'Database:user',
+      msg: `Desactivating the user ${username} and all the cars they own.`
+    });
   }
 
   async deleteUser (username) {
@@ -172,10 +209,10 @@ class Database {
     const time = new Date().getTime();
     car.uuid = uuidGenerator();
     const promises = [
-      db.run(this.cars.insert.normal, [car.uuid, car.model, car.value, time, 1]),
+      db.run(this.cars.insert.normal, [car.uuid, car.model, car.value, `${time}`, 1]),
       db.run(this.cars.insert.local, [car.uuid, car.model, car.value, 0, 0, 1]),
 
-      db.run(this.userOwnCar.insert.normal, [user, car.uuid, time, 1]),
+      db.run(this.userOwnCar.insert.normal, [user, car.uuid, `${time}`, 1]),
       db.run(this.userOwnCar.insert.local, [user, car.uuid, 0, 0, 1])
     ];
     await this.execAsyncSQL(db, promises, {
@@ -185,21 +222,35 @@ class Database {
     return car.uuid;
   }
 
-  // This delete not consider the sync way.
+  async desactivateCar (carId) {
+    const db = await this.getDataBaseInstance();
+    const time = new Date().getTime();
+    const arrayPromises = [
+      db.run(this.userOwnCar.desactivate.normal, [`${time}`, carId]),
+      db.run(this.userOwnCar.desactivate.local, [carId]),
+
+      db.run(this.cars.desactivate.normal, [`${time}`, carId]),
+      db.run(this.cars.desactivate.local, [carId])
+    ];
+    await this.execAsyncSQL(db, arrayPromises, {
+      tag: 'Database:car',
+      msg: `Desactivating the car ${carId}.`
+    });
+  }
+
   async deleteCar (carId) {
     const db = await this.getDataBaseInstance();
-    debug('Database:car', `Deleting the car ${carId}.`);
-    await Promise.all([
+    const arrayPromises = [
       db.run(this.userOwnCar.delete(''), [carId]),
       db.run(this.userOwnCar.delete('Local'), [carId]),
 
       db.run(this.cars.delete(''), [carId]),
       db.run(this.cars.delete('Local'), [carId])
-    ])
-      .catch(error => console.error(error))
-      .finally(() => db.close())
-      .then(() => debug('Database:instance', 'Database closed.'))
-      .catch(errorToClose => console.error(errorToClose));
+    ];
+    await this.execAsyncSQL(db, arrayPromises, {
+      tag: 'Database:car',
+      msg: `Deleting the car ${carId}.`
+    });
   }
 
   async updateCar (newDetails) {
@@ -207,8 +258,8 @@ class Database {
     const localCar = await this.getCar(newDetails.uuid, 'Local');
     const time = new Date().getTime();
     const db = await this.getDataBaseInstance();
-    await Promise.all([
-      db.run(this.cars.update.normal, [newDetails.model, newDetails.value, time, newDetails.uuid]),
+    const arrayPromises = [
+      db.run(this.cars.update.normal, [newDetails.model, newDetails.value, `${time}`, newDetails.uuid]),
       db.run(this.cars.update.local, [
         newDetails.model,
         newDetails.value,
@@ -216,10 +267,11 @@ class Database {
         this.isNewRow(localCar) ? 0 : 1,
         1,
         newDetails.uuid])
-    ]).catch(error => console.error(error))
-      .finally(() => db.close())
-      .then(() => debug('Database:instance', 'Database closed.'))
-      .catch(errorToClose => console.error(errorToClose));
+    ];
+    await this.execAsyncSQL(db, arrayPromises, {
+      tag: 'Database:car',
+      msg: `Updating the car ${newDetails.uuid}`
+    });
   }
 
   /* ===================================================================================== */

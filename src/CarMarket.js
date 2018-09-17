@@ -46,6 +46,20 @@ class CarMarket {
     }
   }
 
+  async changePassword (usr, oldPassword, newPassword) {
+    const user = await this.database.getUser(usr);
+    if (user) {
+      if (user.password === oldPassword) {
+        await this.database.updatePassword(usr, newPassword);
+        console.log(`The password has been changed.`);
+      } else {
+        console.log(`The old password does not match. Unable to update it.`);
+      }
+    } else {
+      console.log(`The user <${usr}> does not exist.`);
+    }
+  }
+
   async addCar (usr, car) {
     console.log(`Adding to user <${usr}> the car <${car.model}:${car.value}>.`);
     if (await this.checkUser(usr)) {
