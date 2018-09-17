@@ -44,6 +44,29 @@ function registerUsers (now) {
   };
 }
 
+const elementsToSync = {
+  news: {
+    users: [
+      { username: 'Jhon', password: '456' },
+      { username: 'Mike', password: '123' },
+      { username: 'Sarah', password: '987' }
+    ],
+    cars: [],
+    userOwnCar: []
+  },
+  modified: {
+    users: [],
+    cars: [],
+    userOwnCar: []
+  },
+  deleted: {
+    users: [],
+    cars: [],
+    userOwnCar: []
+  }
+};
+
 module.exports = {
-  registerUsers
+  registerUsers,
+  elementsToSync
 };

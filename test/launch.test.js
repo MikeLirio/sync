@@ -1,5 +1,6 @@
 'use strict';
 
+const util = require('util');
 const debug = require('../src/debug');
 const fileSystem = require('fs');
 const { useFakeTimers } = require('sinon');
@@ -24,7 +25,7 @@ describe('CarMarket test Demo', function () {
   });
 
   describe('Flow', function () {
-    it('Register users', async function () {
+    it('Flow : Test 1 : Register users', async function () {
       await app.register('Mike', '123');
       await app.register('Jhon', '123');
       await app.register('Sarah', '123');
@@ -46,5 +47,11 @@ describe('CarMarket test Demo', function () {
       users.should.deep.equal(registerUsers.normal);
       localUsers.should.deep.equal(registerUsers.local);
     }).timeout(5000);
+
+    it('Flow : Test 2 : Checking correct array of element when it synchronize', async function () {
+      const elementsToSync = await app.syncService.getRowsToSync();
+      debug('Test:elementsToSync', util.inspect(elementsToSync, false, null, true));
+      elementsToSync.should.deep.equal(results.elementsToSync);
+    });
   });
 });
