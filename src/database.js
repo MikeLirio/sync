@@ -102,17 +102,24 @@ class Database {
   /* User Table */
   /* ===================================================================================== */
 
-  async getUser (username) {
-    debug('Database:user', `Getting the user ${username}...`);
+  async getAllUsers (prefix) {
+    debug('Database:user', `Getting all users...`);
     const db = await this.getDataBaseInstance();
-    let user;
-    await Promise.all([
-      user = db.get(this.users.get.user(), username)
-    ])
-      .catch(error => console.error(error))
-      .finally(() => db.close())
-      .then(() => debug('Database:instance', 'Database closed.'))
-      .catch(errorToClose => console.error(errorToClose));
+    const user = await this.getAsyncSQL(db,
+      db.all(this.users.get.users(prefix)), {
+        tag: 'Database:user',
+        msg: `Getting all users...`
+      });
+    return user;
+  }
+
+  async getUser (username, prefix) {
+    const db = await this.getDataBaseInstance();
+    const user = await this.getAsyncSQL(db,
+      db.get(this.users.get.user(prefix), username), {
+        tag: 'Database:user',
+        msg: `Getting the user ${username}...`
+      });
     return user;
   }
 
@@ -133,19 +140,33 @@ class Database {
   }
 
   async updatePassword (username, newPassword) {
+    const localUsers = await this.getUser(username, 'Local');
+    const time = new Date().getTime();
     const db = await this.getDataBaseInstance();
-    const time = new Date().getTime() + '';
     await this.execAsyncSQL(
       db,
       [
         db.run(this.users.update.normal, [newPassword, `${time}`, username]),
-        db.run(this.users.update.local, [newPassword, username])
+        db.run(this.users.update.local, [
+          newPassword,
+          this.isNewRow(localUsers) ? 0 : 1,
+          username])
       ],
       {
         tag: 'Database:user',
         msg: `Updating the password...`
       }
     );
+  }
+
+  async desactivateOrDeleteUser (username) {
+    const localUser = this.getUser(username, 'Local');
+    const deleteInsteadOfDesactivate = await this.isNewRow(localUser);
+    if (deleteInsteadOfDesactivate) {
+      await this.deleteUser(username);
+    } else {
+      await this.desactivateUser(username);
+    }
   }
 
   async desactivateUser (username) {
@@ -225,6 +246,16 @@ class Database {
       msg: `Adding the car ${car.model}:${car.value} to ${user}.`
     });
     return car.uuid;
+  }
+
+  async desactivateOrDeleteCar (carId) {
+    const localCar = this.getCar(carId, 'Local');
+    const deleteInsteadOfDesactivate = await this.isNewRow(localCar);
+    if (deleteInsteadOfDesactivate) {
+      await this.deleteCar(carId);
+    } else {
+      await this.desactivateCar(carId);
+    }
   }
 
   async desactivateCar (carId) {

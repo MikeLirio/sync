@@ -27,7 +27,8 @@ program
   .alias('s')
   .description('Synchronize the database.')
   .action(function () {
-    new CarMarket().synchronize();
+    const result = new CarMarket().synchronize();
+    console.log(result);
   });
 
 program
@@ -35,7 +36,8 @@ program
   .alias('ls')
   .description('Last time when the application was synchronize with the server.')
   .action(function () {
-    new CarMarket().lastSynchronization();
+    const result = new CarMarket().lastSynchronization();
+    console.log(result);
   });
 
 program
@@ -43,7 +45,8 @@ program
   .alias('r')
   .description('Create a new user in the system.')
   .action(function (name, password) {
-    new CarMarket().register(name, password);
+    const result = new CarMarket().register(name, password);
+    console.log(result);
   });
 
 program
@@ -51,7 +54,8 @@ program
   .alias('cp')
   .description('Change the password of the user.')
   .action(function (username, oldPassword, newPassword) {
-    new CarMarket().changePassword(username, oldPassword, newPassword);
+    const result = new CarMarket().changePassword(username, oldPassword, newPassword);
+    console.log(result);
   });
 
 program
@@ -59,10 +63,11 @@ program
   .alias('ac')
   .description('Add a Car to an User.')
   .action(function (usr, carModel, carValue) {
-    new CarMarket().addCar(usr, {
+    const result = new CarMarket().addCar(usr, {
       model: carModel,
       value: carValue
     });
+    console.log(result);
   });
 
 program
@@ -70,7 +75,8 @@ program
   .alias('gc')
   .description('Get the cars of an user.')
   .action(function (usr) {
-    new CarMarket().getCars(usr);
+    const result = new CarMarket().getCars(usr);
+    console.log(result);
   });
 
 program
@@ -78,11 +84,12 @@ program
   .alias('uc')
   .description('Modify details of a car.')
   .action(function (carModel, carValue, uuid) {
-    new CarMarket().editCar({
+    const result = new CarMarket().editCar({
       uuid,
       model: carModel,
       value: carValue
     });
+    console.log(result);
   });
 
 program
@@ -90,7 +97,8 @@ program
   .alias('dc')
   .description('Deleting a car.')
   .action(function (carId) {
-    new CarMarket().deleteCar(carId);
+    const result = new CarMarket().deleteCar(carId);
+    console.log(result);
   });
 
 program
@@ -98,7 +106,8 @@ program
   .alias('du')
   .description('Deleting an user with all their cars.')
   .action(function (usr) {
-    new CarMarket().deleteUser(usr);
+    const result = new CarMarket().deleteUser(usr);
+    console.log(result);
   });
 
 program.parse(process.argv);

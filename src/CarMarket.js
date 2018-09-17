@@ -37,55 +37,61 @@ class CarMarket {
   }
 
   async register (usr, password) {
-    console.log(`Registering the user <${usr}>...`);
+    let result = '';
+    result = `Registering the user <${usr}>...`;
     if (await this.checkUser(usr)) {
-      console.log(`The user <${usr}> already exists.`);
+      result += `\nThe user <${usr}> already exists.`;
     } else {
       await this.database.addUser(usr, password);
-      console.log(`The user <${usr}> has been registered.`);
+      result += `\nThe user <${usr}> has been registered.`;
     }
+    return result;
   }
 
   async changePassword (usr, oldPassword, newPassword) {
+    let result = '';
     const user = await this.database.getUser(usr);
     if (user) {
       if (user.password === oldPassword) {
         await this.database.updatePassword(usr, newPassword);
-        console.log(`The password has been changed.`);
+        result += `\nThe password has been changed.`;
       } else {
-        console.log(`The old password does not match. Unable to update it.`);
+        result += `\nThe old password does not match. Unable to update it.`;
       }
     } else {
-      console.log(`The user <${usr}> does not exist.`);
+      result += `\nThe user <${usr}> does not exist.`;
     }
+    return result;
   }
 
   async addCar (usr, car) {
-    console.log(`Adding to user <${usr}> the car <${car.model}:${car.value}>.`);
+    let result = `\nAdding to user <${usr}> the car <${car.model}:${car.value}>.`;
     if (await this.checkUser(usr)) {
       const carId = await this.database.addCar(usr, car);
-      console.log(`Car added. Id <${carId}>.`);
+      result += `\nCar added. Id <${carId}>.`;
     } else {
-      console.log(`The user <${usr}> is not registered.`);
+      result += `\nThe user <${usr}> is not registered.`;
     }
+    return result;
   }
 
   async getCars (usr) {
+    let result = '';
     if (await this.checkUser(usr)) {
-      console.log(`Obtaining the cars of <${usr}>...`);
+      result += `\nObtaining the cars of <${usr}>...`;
       const cars = await this.database.getCarsFromUser(usr);
       if (cars && cars.length > 0) {
-        let result = 'Cars founded:';
+        result += '\nCars founded:';
         cars.forEach(car => {
           result += `\n - ${car.model} : ${car.value} : ${car.uuid}`;
         });
-        console.log(result);
       } else {
-        console.log('No cars founded.');
+        result += '\nNo cars founded.';
       }
     } else {
-      console.log(`The user <${usr}> is not registered.`);
+      result += `\nThe user <${usr}> is not registered.`;
     }
+    return result;
   }
 
   async editCar (newDetails) {
@@ -96,28 +102,28 @@ class CarMarket {
       const updatedCar = await this.database.getCar(carId);
       debug('CarMarket:editCar:OldCar', car);
       debug('CarMarket:editCar:UpdatedCar', updatedCar);
-      console.log(`Old car details: \n - ${car.model}:${car.value}\nNew details:\n - ${updatedCar.model}:${updatedCar.value}`);
+      return `Old car details: \n - ${car.model}:${car.value}\nNew details:\n - ${updatedCar.model}:${updatedCar.value}`;
     } else {
-      console.log(`The car with the ID <${carId}> does not exist.`);
+      return `The car with the ID <${carId}> does not exist.`;
     }
   }
 
   async deleteCar (carId) {
     const car = await this.database.getCar(carId);
     if (car) {
-      await this.database.deleteCar(carId);
-      console.log(`The car <${carId}> has been deleted.`);
+      await this.database.desactivateOrDeleteCar(carId);
+      return `The car <${carId}> has been deleted.`;
     } else {
-      console.log(`The car with the ID <${carId}> does not exist.`);
+      return `The car with the ID <${carId}> does not exist.`;
     }
   }
 
   async deleteUser (usr) {
     if (await this.checkUser(usr)) {
-      await this.database.desactivateUser(usr);
-      console.log(`The user <${usr}> has been deleted.`);
+      await this.database.desactivateOrDeleteUser(usr);
+      return `The user <${usr}> has been deleted.`;
     } else {
-      console.log(`The user <${usr}> does not exist.`);
+      return `The user <${usr}> does not exist.`;
     }
   }
 
@@ -130,9 +136,9 @@ class CarMarket {
   async lastSynchronization () {
     const time = await this.database.getLastSynchronization();
     if (time) {
-      console.log(`Last Sync: ${new Date(parseInt(time.lastSync)).toUTCString()}`);
+      return `Last Sync: ${new Date(parseInt(time.lastSync)).toUTCString()}`;
     } else {
-      console.log('This APP has not been synchronize yet.');
+      return 'This APP has not been synchronize yet.';
     }
   }
 }

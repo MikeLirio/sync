@@ -33,7 +33,7 @@ const test = {
   app: {},
   database: {
     path: '',
-    name: ':memory:'
+    name: 'test.car.db'
   },
   server: {
     mock: true,
