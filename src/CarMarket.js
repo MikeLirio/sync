@@ -20,7 +20,7 @@ class CarMarket {
     if (configuration) {
       this.config = configuration;
       this.database = new Database(this.config.database);
-      this.sync = new SyncService(this.config);
+      this.syncService = new SyncService(this.config);
     } else {
       throw Error('Error. No configuration founded.');
     }
@@ -128,7 +128,7 @@ class CarMarket {
 
   async synchronize () {
     debug('CarMarket:sync', 'Begining the synchronization...');
-    await this.sync.synchronize();
+    await this.syncService.synchronize();
     await this.lastSynchronization();
   }
 
