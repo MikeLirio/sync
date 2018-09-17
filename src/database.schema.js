@@ -37,12 +37,13 @@ const users = {
     get: {
       user (prefix = '') {
         checkTablePrefix(prefix, 'Cars');
-        return `SELECT * FROM ${prefix}Users WHERE username = ?`;
+        return `SELECT * FROM ${prefix}Users WHERE username = ? AND isActive = 1`;
       },
       users (prefix = '') {
         checkTablePrefix(prefix, 'Cars');
-        return `SELECT * FROM ${prefix}Users`;
+        return `SELECT * FROM ${prefix}Users WHERE isActive = 1`;
       },
+      all: 'SELECT * FROM Users',
       newRows: 'SELECT username, password FROM LocalUsers WHERE isFromServer = 0 AND isModified = 0 AND isActive = 1',
       modifiedRows: 'SELECT username, password FROM LocalUsers WHERE isFromServer = 0 AND isModified = 1 AND isActive = 1',
       deletedRows: 'SELECT username, password FROM LocalUsers WHERE isFromServer = 0 AND isModified = 0 AND isActive = 0'
@@ -64,7 +65,8 @@ const users = {
     delete (prefix = '') {
       checkTablePrefix(prefix, 'UserOwnCar');
       return `DELETE FROM ${prefix}Users WHERE username = ?`;
-    }
+    },
+    deleteAllLocal: 'DELETE FROM LocalUsers'
   }
 };
 
@@ -98,6 +100,7 @@ const cars = {
         checkTablePrefix(prefix, 'Cars');
         return `SELECT * FROM ${prefix}Cars WHERE isActive = 1`;
       },
+      all: 'SELECT * FROM Cars',
       newRows: 'SELECT uuid, model, value FROM LocalCars WHERE isFromServer = 0 AND isModified = 0 AND isActive = 1',
       modifiedRows: 'SELECT uuid, model, value FROM LocalCars WHERE isFromServer = 0 AND isModified = 1 AND isActive = 1',
       deletedRows: 'SELECT uuid, model, value FROM LocalCars WHERE isFromServer = 0 AND isModified = 0 AND isActive = 0'
@@ -119,7 +122,8 @@ const cars = {
     delete (prefix = '') {
       checkTablePrefix(prefix, 'Cars');
       return `DELETE FROM ${prefix}Cars WHERE uuid = ?`;
-    }
+    },
+    deleteAllLocal: 'DELETE FROM LocalCars'
   }
 };
 
@@ -159,6 +163,7 @@ const userOwnCar = {
         checkTablePrefix(prefix, 'userOwnCar');
         return `SELECT * FROM ${prefix}UserOwnCar WHERE user = ? AND isActive = 1`;
       },
+      all: 'SELECT * FROM UserOwnCar',
       newRows: 'SELECT user, carId FROM LocalUserOwnCar WHERE isFromServer = 0 AND isModified = 0 AND isActive = 1',
       modifiedRows: 'SELECT user, carId FROM LocalUserOwnCar WHERE isFromServer = 0 AND isModified = 1 AND isActive = 1',
       deletedRows: 'SELECT user, carId FROM LocalUserOwnCar WHERE isFromServer = 0 AND isModified = 0 AND isActive = 0'
@@ -185,7 +190,8 @@ const userOwnCar = {
     deleteAll (prefix = '') {
       checkTablePrefix(prefix, 'UserOwnCar');
       return `DELETE FROM ${prefix}UserOwnCar WHERE user = ?`;
-    }
+    },
+    deleteAllLocal: 'DELETE FROM LocalCars'
   }
 };
 

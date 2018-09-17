@@ -51,6 +51,19 @@ class Database {
     return result;
   }
 
+  async deleteAllLocals () {
+    const db = await this.getDataBaseInstance();
+    const promisesArray = [
+      db.run(this.users.deleteAllLocal),
+      db.run(this.cars.deleteAllLocal),
+      db.run(this.userOwnCar.deleteAllLocal)
+    ];
+    await this.execAsyncSQL(db, promisesArray, {
+      tag: 'Database:sync:deleteLocals',
+      msg: 'Deleting all the local tables...'
+    });
+  }
+
   /* ===================================================================================== */
   /* Initialitation/Instance of the data base */
   /* ===================================================================================== */
@@ -102,7 +115,7 @@ class Database {
   /* User Table */
   /* ===================================================================================== */
 
-  async getAllUsers (prefix) {
+  async getAllActiveUsers (prefix) {
     debug('Database:user', `Getting all users...`);
     const db = await this.getDataBaseInstance();
     const user = await this.getAsyncSQL(db,
@@ -359,6 +372,36 @@ class Database {
 
   getConflictsConflictUserOwnCar () {
     return this.getConflictsFrom('ConflictUserOwnCar');
+  }
+
+  async deleteNotFoundedRows (syncResponse) {
+    const { users, cars, userOwnCar } = await this.getAllv2();
+
+    await this.deteleteNotFoundedRowsFrom(syncResponse.updated.Users, users);
+    await this.deteleteNotFoundedRowsFrom(syncResponse.updated.Cars, cars);
+    await this.deteleteNotFoundedRowsFrom(syncResponse.updated.UserOwnCar, userOwnCar);
+  }
+
+  async getAll () {
+    debug('Database:sync:getAll', 'Getting all rows Users - Cars - UserOwnCar');
+    const db = await this.getDataBaseInstance();
+
+    let users, cars, userOwnCar;
+    await Promise.all([
+      users = db.all(this.users.get.all),
+      cars = db.all(this.cars.get.all),
+      userOwnCar = db.all(this.userOwnCar.get.all)
+    ])
+      .catch(error => console.error(error))
+      .finally(() => db.close())
+      .then(() => debug('Database:instance', 'Database closed.'))
+      .catch(errorToClose => console.error(errorToClose));
+
+    return {
+      users,
+      cars,
+      userOwnCar
+    };
   }
 
   /* ===================================================================================== */

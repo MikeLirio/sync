@@ -60,9 +60,10 @@ class SyncService {
     }
   }
 
-  synchronizeLocalData (syncResponse) {
-    // TODO finish it
-    debug('SyncService:sync:localData', 'work in progress');
+  async synchronizeLocalData (syncResponse) {
+    await this.database.deleteAllLocals();
+    await this.database.deleteNotFoundedRows(syncResponse);
+    await this.database.updateWithServerResponse();
   }
 
   handleConflicts () {
