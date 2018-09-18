@@ -49,7 +49,7 @@ const test = {
         method: 'GET'
       },
       synchronization: {
-        path: 'synchronize',
+        path: '/synchronize',
         method: 'POST'
       }
     }
