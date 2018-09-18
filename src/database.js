@@ -152,7 +152,7 @@ class Database {
     );
   }
 
-  async updatePassword (username, newPassword) {
+  async updatePassword (username, newPassword, isFromServer) {
     const localUsers = await this.getUser(username, 'Local');
     const time = new Date().getTime();
     const db = await this.getDataBaseInstance();
@@ -162,6 +162,7 @@ class Database {
         db.run(this.users.update.normal, [newPassword, `${time}`, username]),
         db.run(this.users.update.local, [
           newPassword,
+          isFromServer,
           this.isNewRow(localUsers) ? 0 : 1,
           username])
       ],
@@ -218,7 +219,7 @@ class Database {
 
     listOfPromisesToDetele.push(db.run(this.users.delete(''), [username]));
     listOfPromisesToDetele.push(db.run(this.users.delete('Local'), [username]));
-    await this.execAsyncSQL(db, listOfPromisesToDetele, {
+    return this.execAsyncSQL(db, listOfPromisesToDetele, {
       tag: 'Database:user',
       msg: `Deleting the user ${username} and all the cars.`
     });
@@ -374,34 +375,121 @@ class Database {
     return this.getConflictsFrom('ConflictUserOwnCar');
   }
 
-  async deleteNotFoundedRows (syncResponse) {
+  async checkChangesBetweenServerAndLocal (syncResponse, serverTime) {
     const { users, cars, userOwnCar } = await this.getAll();
 
-    await this.deteleteNotFoundedRowsFrom(syncResponse.updated.Users, users);
-    await this.deteleteNotFoundedRowsFrom(syncResponse.updated.Cars, cars);
-    await this.deteleteNotFoundedRowsFrom(syncResponse.updated.UserOwnCar, userOwnCar);
+    await this.checkChangesBetweenServerAndLocalUser(syncResponse.updated.Users, users, serverTime);
+    // await this.checkChangesBetweenServerAndLocalCars(syncResponse.updated.Cars, cars);
+    // await this.checkChangesBetweenServerAndLocalUserOwnCars(syncResponse.updated.UserOwnCar, userOwnCar);
+  }
+
+  async checkChangesBetweenServerAndLocalUser (syncResponse, usersRows, serverTime) {
+    debug('Database:sync:syncResponse', syncResponse);
+    debug('Database:sync:tableRows', usersRows);
+    const isFromServer = 1;
+    const isModified = 1;
+    const isActive = 1;
+    const isNotModified = 0;
+
+    const rowsToAdd = syncResponse.filter(function (responseRow) {
+      return usersRows.filter(function (userRow) {
+        return userRow.username === responseRow.username;
+      }).length === 0;
+    });
+    debug('Database:sync:rowsToAdd', rowsToAdd);
+
+    const rowsToModify = syncResponse.filter(function (responseRow) {
+      return usersRows.filter(function (userRow) {
+        return userRow.username === responseRow.username && userRow.password !== responseRow.password;
+      }).length !== 0;
+    });
+    debug('Database:sync:rowsToModify', rowsToModify);
+
+    const rowsToDelete = usersRows.filter(function (userRow) {
+      return syncResponse.filter(function (responseRow) {
+        return responseRow.username === userRow.username;
+      }).length === 0;
+    });
+    debug('Database:sync:rowsToDelete', rowsToDelete);
+
+    const rowsWithoutChanges = syncResponse.filter(function (responseRow) {
+      return usersRows.filter(function (userRow) {
+        return userRow.username === responseRow.username && userRow.password === responseRow.password;
+      }).length !== 0;
+    });
+    debug('Database:sync:rowsWithoutChanges', rowsWithoutChanges);
+
+    const db = await this.getDataBaseInstance();
+    const arrayPromises = [];
+    rowsToAdd.forEach(row => {
+      arrayPromises.push(db.run(this.users.insert.normal, [
+        row.username,
+        row.password,
+        `${serverTime}`,
+        1
+      ]));
+      arrayPromises.push(db.run(this.users.insert.local, [
+        row.username,
+        row.password,
+        isFromServer,
+        isNotModified,
+        isActive
+      ]));
+    });
+    rowsToModify.forEach(row => {
+      arrayPromises.push(db.run(this.users.update.normal, [row.password, `${serverTime}`, row.username]));
+      arrayPromises.push(db.run(this.users.insert.local, [
+        row.username,
+        row.password,
+        isFromServer,
+        isModified,
+        isActive
+      ]));
+    });
+    rowsWithoutChanges.forEach(row => {
+      arrayPromises.push(db.run(this.users.insert.local, [
+        row.username,
+        row.password,
+        isFromServer,
+        isNotModified,
+        isActive
+      ]));
+    });
+
+    await this.execAsyncSQL(db, arrayPromises, {
+      tag: 'Database:sync:users',
+      msg: 'Making the synchronization of Users table.'
+    });
+
+    const deletePromises = [];
+    rowsToDelete.forEach(row => deletePromises.push(this.deleteUser(row.username)));
+    await Promise.all(deletePromises);
   }
 
   async getAll () {
     debug('Database:sync:getAll', 'Getting all rows Users - Cars - UserOwnCar');
     const db = await this.getDataBaseInstance();
-
-    let users, cars, userOwnCar;
+    let result;
     await Promise.all([
-      users = db.all(this.users.get.all),
-      cars = db.all(this.cars.get.all),
-      userOwnCar = db.all(this.userOwnCar.get.all)
+      db.all(this.users.get.all),
+      db.all(this.cars.get.all),
+      db.all(this.userOwnCar.get.all)
     ])
-      .catch(error => console.error(error))
+      .then(results => {
+        result = {
+          users: results[0],
+          cars: results[1],
+          userOwnCar: results[2]
+        };
+      })
+      .catch(error => {
+        console.error(error);
+        throw new Error(error);
+      })
       .finally(() => db.close())
       .then(() => debug('Database:instance', 'Database closed.'))
       .catch(errorToClose => console.error(errorToClose));
-
-    return {
-      users,
-      cars,
-      userOwnCar
-    };
+    return result;
   }
 
   /* ===================================================================================== */
@@ -411,7 +499,11 @@ class Database {
   async execAsyncSQL (database, promises, debugOptions) {
     debug(debugOptions.tag, debugOptions.msg);
     await Promise.all(promises)
-      .catch(error => console.error(error))
+      .then(() => debug('Database:instance', 'Executed'))
+      .catch(error => {
+        console.error(error);
+        throw new Error(error);
+      })
       .finally(() => database.close())
       .then(() => debug('Database:instance', 'Database closed.'))
       .catch(errorToClose => console.error(errorToClose));
@@ -423,7 +515,10 @@ class Database {
     await Promise.all([
       result = promise
     ])
-      .catch(error => console.error(error))
+      .catch(error => {
+        console.error(error);
+        throw new Error(error);
+      })
       .finally(() => database.close())
       .then(() => debug('Database:instance', 'Database closed.'))
       .catch(errorToClose => console.error(errorToClose));

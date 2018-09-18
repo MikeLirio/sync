@@ -17,7 +17,14 @@ nock('http://server.mock:8080')
   .reply(200, {
     updated: {
       Users: [{
-
+        username: 'Mike',
+        password: '951'
+      }, {
+        username: 'Sarah',
+        password: '987'
+      }, {
+        username: 'Lane',
+        password: '456'
       }],
       Cars: [],
       UserOwnCar: []

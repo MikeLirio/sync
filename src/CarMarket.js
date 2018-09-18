@@ -49,10 +49,11 @@ class CarMarket {
 
   async changePassword (usr, oldPassword, newPassword) {
     let result = '';
+    const isFromServer = '0';
     const user = await this.database.getUser(usr);
     if (user) {
       if (user.password === oldPassword) {
-        await this.database.updatePassword(usr, newPassword);
+        await this.database.updatePassword(usr, newPassword, isFromServer);
         result += `\nThe password has been changed.`;
       } else {
         result += `\nThe old password does not match. Unable to update it.`;
@@ -128,8 +129,10 @@ class CarMarket {
 
   async synchronize () {
     debug('CarMarket:sync', 'Begining the synchronization...');
-    await this.syncService.synchronize();
-    await this.lastSynchronization();
+    let result;
+    result = await this.syncService.synchronize();
+    result += '\n' + await this.lastSynchronization();
+    return result;
   }
 
   async lastSynchronization () {

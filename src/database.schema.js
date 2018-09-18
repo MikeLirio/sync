@@ -55,7 +55,7 @@ const users = {
     },
     update: {
       normal: 'UPDATE Users SET password = ?, ModifiedOn = ? WHERE username = ?',
-      local: 'UPDATE LocalUsers SET password = ?, isFromServer = 0, isModified = ? WHERE username = ?'
+      local: 'UPDATE LocalUsers SET password = ?, isFromServer = ?, isModified = ? WHERE username = ?'
     },
     desactivate: {
       normal: 'UPDATE Users SET ModifiedOn = ?, isActive = 0 WHERE username = ?',

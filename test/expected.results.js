@@ -66,7 +66,52 @@ const elementsToSync = {
   }
 };
 
+function usersAfterFirstSync (now) {
+  return {
+    normal: [
+      {
+        username: 'Lane',
+        password: '456',
+        ModifiedOn: `${now + 1000}`,
+        isActive: 1
+      }, {
+        username: 'Mike',
+        password: '951',
+        ModifiedOn: `${now + 2000}`,
+        isActive: 1
+      }, {
+        username: 'Sarah',
+        password: '987',
+        ModifiedOn: `${now + 2000}`,
+        isActive: 1
+      }
+    ],
+    local: [
+      {
+        username: 'Lane',
+        password: '456',
+        isFromServer: 1,
+        isModified: 0,
+        isActive: 1
+      }, {
+        username: 'Mike',
+        password: '951',
+        isFromServer: 1,
+        isModified: 1,
+        isActive: 1
+      }, {
+        username: 'Sarah',
+        password: '987',
+        isFromServer: 1,
+        isModified: 0,
+        isActive: 1
+      }
+    ]
+  };
+}
+
 module.exports = {
   registerUsers,
-  elementsToSync
+  elementsToSync,
+  usersAfterFirstSync
 };

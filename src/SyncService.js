@@ -1,6 +1,7 @@
 'use strict';
 
 const Database = require('./Database');
+const util = require('util');
 const debug = require('./debug');
 const http = require('http');
 
@@ -28,42 +29,45 @@ class SyncService {
   }
 
   async synchronize () {
-    if (await this.checkConflicts()) {
-      console.log('Conflicts founded.');
-      console.error('Error: The synchronization is not allowed until the conflicts are been resolved.');
-    } else {
-      console.log('No conflicts founded.');
-      const dateTimeFromServer = await this.getDateTimeFromServer();
-      const rowsToSync = await this.getRowsToSync();
-      const rowsToSyncStringify = JSON.stringify(rowsToSync);
-      const optionRequest = {
-        rejectUnauthorized: this.server.options.rejectUnauthorized,
-        protocol: this.server.options.protocol,
-        hostname: this.server.options.host,
-        port: this.server.options.port,
-        method: this.server.endpoints['synchronization'].method,
-        path: this.server.endpoints['synchronization'].path,
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(rowsToSyncStringify)
-        }
-      };
-      const syncResponse = await this.postRequest(optionRequest, rowsToSyncStringify);
-      this.synchronizeLocalData(syncResponse);
+    try {
       if (await this.checkConflicts()) {
-        console.log('Conflicts appear.');
-        this.handleConflicts();
+        console.error('Error: The synchronization is not allowed until the conflicts are been resolved.');
+        return 'Conflicts founded.';
       } else {
-        console.log('No conflicts generated.');
+        debug('SyncService:sync', 'No conflicts founded.');
+        const dateTimeFromServer = await this.getDateTimeFromServer();
+        const rowsToSync = await this.getRowsToSync();
+        const rowsToSyncStringify = JSON.stringify(rowsToSync);
+        const optionRequest = {
+          rejectUnauthorized: this.server.options.rejectUnauthorized,
+          protocol: this.server.options.protocol,
+          hostname: this.server.options.host,
+          port: this.server.options.port,
+          method: this.server.endpoints['synchronization'].method,
+          path: this.server.endpoints['synchronization'].path,
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(rowsToSyncStringify)
+          }
+        };
+        const syncResponse = await this.postRequest(optionRequest, rowsToSyncStringify);
+        await this.synchronizeLocalData(syncResponse, dateTimeFromServer);
+        if (await this.checkConflicts()) {
+          debug('SyncService:sync', 'Conflicts appear.');
+          this.handleConflicts();
+        } else {
+          debug('SyncService:sync', 'No conflicts generated.');
+        }
+        await this.database.setDateTimeFromServer(dateTimeFromServer);
       }
-      await this.database.setDateTimeFromServer(dateTimeFromServer);
+    } catch (error) {
+      throw new Error('Unable to synchronize: ', error);
     }
   }
 
-  async synchronizeLocalData (syncResponse) {
+  async synchronizeLocalData (syncResponse, dateTimeFromServer) {
     await this.database.deleteAllLocals();
-    await this.database.deleteNotFoundedRows(syncResponse);
-    await this.database.updateWithServerResponse();
+    await this.database.checkChangesBetweenServerAndLocal(syncResponse, dateTimeFromServer);
   }
 
   handleConflicts () {
@@ -122,7 +126,7 @@ class SyncService {
           });
           response.on('end', () => {
             const parsedData = JSON.parse(rawData);
-            debug(`SyncService:http:post:${statusCode}`, parsedData);
+            debug(`SyncService:http:post:${statusCode}`, util.inspect(parsedData, false, null, true));
             resolve(parsedData);
           });
         }
@@ -152,7 +156,7 @@ class SyncService {
           });
           response.on('end', () => {
             const parsedData = JSON.parse(rawData);
-            debug(`SyncService:http:get:${statusCode}`, parsedData);
+            debug(`SyncService:http:get:${statusCode}`, util.inspect(parsedData, false, null, true));
             resolve(parsedData);
           });
         }
