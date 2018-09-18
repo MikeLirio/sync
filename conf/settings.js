@@ -36,7 +36,7 @@ const test = {
     name: 'test.car.db'
   },
   server: {
-    mock: true,
+    mock: false,
     options: {
       host: 'server.mock',
       port: '8080',
