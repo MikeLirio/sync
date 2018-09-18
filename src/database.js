@@ -375,7 +375,7 @@ class Database {
   }
 
   async deleteNotFoundedRows (syncResponse) {
-    const { users, cars, userOwnCar } = await this.getAllv2();
+    const { users, cars, userOwnCar } = await this.getAll();
 
     await this.deteleteNotFoundedRowsFrom(syncResponse.updated.Users, users);
     await this.deteleteNotFoundedRowsFrom(syncResponse.updated.Cars, cars);

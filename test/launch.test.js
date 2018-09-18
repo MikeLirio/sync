@@ -37,10 +37,10 @@ describe('CarMarket test Demo', function () {
       await app.register('Jane', '123');
       await app.deleteUser('Jane');
 
-      const users = await app.database.getAllUsers();
+      const users = await app.database.getAllActiveUsers();
       debug('Test:register:users', users);
 
-      const localUsers = await app.database.getAllUsers('Local');
+      const localUsers = await app.database.getAllActiveUsers('Local');
       debug('Test:register:localUsers', localUsers);
 
       const registerUsers = results.registerUsers(now);
